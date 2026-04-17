@@ -37,9 +37,23 @@ git push -u origin ashraf
 
 ---
 
+### Step 4: Main থেকে latest update নেওয়া (Merge)
+কাজ শুরু করার আগে বা নিয়মিতভাবে main branch এর নতুন পরিবর্তন নিজের ব্রাঞ্চে আনতে হবে:
+
+```bash
+git checkout your_nickname
+git merge main
+```
+
+উদাহরণ:
+```bash
+git checkout ashraf
+git merge main
+```
+
+---
 ## নিয়মাবলী
 - কাজ করার আগে অবশ্যই নিজের ব্রাঞ্চ তৈরি করতে হবে  
 - সরাসরি `main` ব্রাঞ্চে push করা যাবে না  
 - প্রতিটি পরিবর্তনের আগে `main` থেকে latest update নিয়ে নিতে হবে  
 - commit message পরিষ্কার এবং meaningful হতে হবে  
-```
