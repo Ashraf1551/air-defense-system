@@ -52,6 +52,17 @@ git merge main
 ```
 
 ---
+
+### Step 4: পরিবর্তন commit এবং push করা
+
+কোনো কাজ করার পর নিচের কমান্ডগুলো ব্যবহার করো:
+
+```bash
+git add .
+git commit -m "give a meaningful commit message"
+git push -u origin your_branch_name
+```
+
 ## নিয়মাবলী
 - কাজ করার আগে অবশ্যই নিজের ব্রাঞ্চ তৈরি করতে হবে  
 - সরাসরি `main` ব্রাঞ্চে push করা যাবে না  
