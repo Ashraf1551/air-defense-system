@@ -123,6 +123,46 @@ static void col3(float r, float g, float b) { glColor3f(r, g, b); }
 // Set 4-component RGBA color with alpha (transparency)
 static void col4(float r, float g, float b, float a) { glColor4f(r, g, b, a); }
 
+static void drawFilledCircle(float cx, float cy, float r, int seg = 60) {
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2f(cx, cy);
+    for (int i = 0; i <= seg; i++) {
+        float a = 2.0f * PI * i / seg;
+        glVertex2f(cx + r * cosf(a), cy + r * sinf(a));
+    }
+    glEnd();
+}
+
+static void drawCircleOutline(float cx, float cy, float r, int seg = 60) {
+    glBegin(GL_LINE_LOOP);
+    for (int i = 0; i < seg; i++) {
+        float a = 2.0f * PI * i / seg;
+        glVertex2f(cx + r * cosf(a), cy + r * sinf(a));
+    }
+    glEnd();
+}
+
+static void drawLine(float x1, float y1, float x2, float y2) {
+    glBegin(GL_LINES);
+    glVertex2f(x1, y1);
+    glVertex2f(x2, y2);
+    glEnd();
+}
+
+static void drawRect(float x, float y, float w, float h) {
+    glBegin(GL_QUADS);
+    glVertex2f(x, y);
+    glVertex2f(x + w, y);
+    glVertex2f(x + w, y + h);
+    glVertex2f(x, y + h);
+    glEnd();
+}
+
+static void drawText(float x, float y, const char* s, void* font = GLUT_BITMAP_HELVETICA_18) {
+    glRasterPos2f(x, y);
+    for (; *s; s++) glutBitmapCharacter(font, *s);
+}
+
 // ─── Display ─────────────────────────────────────────────────
 // Render the complete scene (called once per frame)
 static void display()
