@@ -239,7 +239,6 @@ static void drawCitySkyline() {
 static void drawRadar() {
     float cx = RADAR_X, cy = RADAR_Y, r = RADAR_R;
     float sweepRad = gRadarAngle * PI / 180.0f;
-
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
