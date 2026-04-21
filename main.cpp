@@ -268,6 +268,61 @@ static void drawRadar() {
 
     glDisable(GL_BLEND);
 }
+static void drawDefenseVehicle() {
+    const float BX = 65.0f, BY = 200.0f;
+
+    // Tracks
+    col3(0.16f, 0.16f, 0.16f);
+    drawRect(BX - 12, BY, 220, 5);
+    drawRect(BX - 12, BY + 35, 220, 5);
+
+    // Wheels
+    for (int i = 0; i < 8; i++) {
+        col3(0.22f, 0.22f, 0.22f);
+        drawFilledCircle(BX + 5 + i * 25.0f, BY + 15, 13);
+        col3(0.10f, 0.10f, 0.10f);
+        drawFilledCircle(BX + 5 + i * 25.0f, BY + 15, 8);
+    }
+
+    // Hull
+    col3(0.16f, 0.28f, 0.10f);
+    drawRect(BX - 2, BY + 26, 200, 12);
+    col3(0.18f, 0.31f, 0.11f);
+    drawRect(BX - 5, BY + 38, 205, 32);
+
+    // Turret
+    col3(0.20f, 0.35f, 0.14f);
+    drawRect(BX + 15, BY + 70, 165, 42);
+
+    // Radar mast
+    col3(0.24f, 0.40f, 0.16f);
+    drawRect(BX + 22, BY + 106, 8, 38);
+
+    // Radar dish (rotating)
+    glPushMatrix();
+    glTranslatef(BX + 25, BY + 150, 0);
+    glRotatef(gFrameCounter * 2.2f, 0, 0, 1);
+    glTranslatef(-(BX + 25), -(BY + 150), 0);
+
+    col3(0.52f, 0.64f, 0.36f);
+    drawFilledCircle(BX + 25, BY + 150, 34);
+
+    col3(0.65f, 0.75f, 0.48f);
+    glLineWidth(3.5f);
+    drawCircleOutline(BX + 25, BY + 150, 34);
+    glLineWidth(1.0f);
+
+    glPopMatrix();
+
+    // Missile launchers (3 tubes)
+    col3(0.20f, 0.34f, 0.14f);
+    drawRect(BX + 95, BY + 80, 48, 35);
+    
+    for (int t = 0; t < 3; t++) {
+        col3(0.22f, 0.36f, 0.16f);
+        drawRect(BX + 105 + t * 12, BY + 90, 8, 35);
+    }
+}
 // ─── Display ─────────────────────────────────────────────────
 // Render the complete scene (called once per frame)
 static void display()
