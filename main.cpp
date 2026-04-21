@@ -313,34 +313,81 @@ static void drawCitySkyline()
 }
 
 // ========== RADAR ==========
-static void drawRadar() {
-    float cx = RADAR_X, cy = RADAR_Y, r = RADAR_R;
-    float sweepRad = gRadarAngle * PI / 180.0f;
+static void drawRadar()
+{
+    float cx=RADAR_X, cy=RADAR_Y, r=RADAR_R;
+    float sweepRad = gRadarAngle * PI/180.0f;
+
     glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 
-    col4(0.00f, 0.06f, 0.00f, 0.95f);
-    drawFilledCircle(cx, cy, r);
+    // Background with pulsing effect
+    float bgPulse = 0.95f + 0.05f * sinf(gFrameCounter * 0.05f);
+    col4(0.00f,0.06f,0.00f,bgPulse); drawFilledCircle(cx,cy,r);
 
+    // Concentric rings with enhanced glow
     glLineWidth(1.0f);
-    for (int i = 1; i <= 4; i++) {
-        col4(0.00f, 0.45f, 0.12f, 0.6f);
-        drawCircleOutline(cx, cy, r * (float)i / 4.0f);
+    for(int i=1;i<=4;i++){
+        col4(0.00f,0.45f,0.12f,0.6f);
+        drawCircleOutline(cx,cy,r*(float)i/4.0f);
+    }
+    // Cross hairs
+    col4(0.00f,0.42f,0.12f,0.6f);
+    drawLine(cx-r,cy,cx+r,cy);
+    drawLine(cx,cy-r,cx,cy+r);
+
+    // Sweep trail (fan) - enhanced
+    int TRAIL=50;
+    for(int i=0;i<TRAIL;i++){
+        float a=sweepRad - i*(PI/60.0f);
+        float alpha=(float)(TRAIL-i)/(float)TRAIL * 0.65f;
+        col4(0.00f,0.90f,0.25f,alpha);
+        glBegin(GL_TRIANGLES);
+        glVertex2f(cx,cy);
+        glVertex2f(cx+r*cosf(a),          cy+r*sinf(a));
+        glVertex2f(cx+r*cosf(a-PI/60.0f), cy+r*sinf(a-PI/60.0f));
+        glEnd();
+    }
+    
+    // Sweep line with glow
+    col4(0.00f,0.80f,0.20f,0.3f);
+    glLineWidth(4.0f);
+    drawLine(cx,cy, cx+r*cosf(sweepRad), cy+r*sinf(sweepRad));
+    col4(0.20f,1.00f,0.40f,1.0f);
+    glLineWidth(2.0f);
+    drawLine(cx,cy, cx+r*cosf(sweepRad), cy+r*sinf(sweepRad));
+    glLineWidth(1.0f);
+
+    // Drone blips on radar
+    for(int i=0;i<MAX_DRONES;i++){
+        if(gDrones[i].active && gDrones[i].detected){
+            // Map world position to radar screen
+            float wx=(gDrones[i].x - cx)/(RADAR_DETECT_RANGE)*r;
+            float wy=(gDrones[i].y - cy)/(RADAR_DETECT_RANGE)*r;
+            float bd=sqrtf(wx*wx+wy*wy);
+            if(bd>r-5){ wx=wx/bd*(r-5); wy=wy/bd*(r-5); }
+            // Pulsing blip
+            float blipPulse = 0.5f + 0.5f * sinf(gFrameCounter * 0.15f);
+            if(blipPulse > 0.3f){
+                col4(1.0f,0.25f,0.05f,1.0f);
+                drawFilledCircle(cx+wx,cy+wy,5);
+                col4(1.0f,0.60f,0.30f,0.6f);
+                drawFilledCircle(cx+wx,cy+wy,8);
+            }
+        }
     }
 
-    col4(0.00f, 0.80f, 0.20f, 0.3f);
-    glLineWidth(4.0f);
-    drawLine(cx, cy, cx + r * cosf(sweepRad), cy + r * sinf(sweepRad));
-    
-    col4(0.10f, 0.70f, 0.25f, 1.0f);
+    // Radar outer ring
+    col4(0.10f,0.70f,0.25f,1.0f);
     glLineWidth(3.0f);
-    drawCircleOutline(cx, cy, r);
+    drawCircleOutline(cx,cy,r);
     glLineWidth(1.0f);
 
-    col4(0.60f, 1.00f, 0.70f, 0.5f);
-    drawFilledCircle(cx, cy, 8);
-    col4(0.30f, 1.00f, 0.50f, 1.0f);
-    drawFilledCircle(cx, cy, 5);
+    // Centre dot with glow
+    col4(0.60f,1.00f,0.70f,0.5f);
+    drawFilledCircle(cx,cy,8);
+    col4(0.30f,1.00f,0.50f,1.0f);
+    drawFilledCircle(cx,cy,5);
 
     glDisable(GL_BLEND);
 }
