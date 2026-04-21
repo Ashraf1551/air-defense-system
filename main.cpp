@@ -162,7 +162,63 @@ static void drawText(float x, float y, const char* s, void* font = GLUT_BITMAP_H
     glRasterPos2f(x, y);
     for (; *s; s++) glutBitmapCharacter(font, *s);
 }
+static void drawCloud(float cx, float cy, float scale) {
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    col4(200.0f / 255.0f, 232.0f / 255.0f, 245.0f / 255.0f, 0.65f);
+    
+    float radius = 18.0f * scale;
+    drawFilledCircle(cx, cy, 0.07f * radius, 20);
+    drawFilledCircle(cx - 0.06f * radius, cy, 0.07f * radius, 20);
+    drawFilledCircle(cx + 0.06f * radius, cy, 0.07f * radius, 20);
+    
+    glDisable(GL_BLEND);
+}
 
+static void drawClouds() {
+    for (int i = 0; i < 20; i++) {
+        if (gClouds[i].active) {
+            drawCloud(gClouds[i].x, gClouds[i].y, gClouds[i].scale);
+        }
+    }
+}
+
+static void updateClouds() {
+    for (int i = 0; i < 20; i++) {
+        if (gClouds[i].active) {
+            gClouds[i].x += gClouds[i].speed;
+            if (gClouds[i].x > WIN_W + 150) gClouds[i].x = -150;
+        }
+    }
+}
+
+static void drawBackground() {
+    glBegin(GL_QUADS);
+    col3(0.01f, 0.04f, 0.16f);
+    glVertex2f(0, WIN_H);
+    glVertex2f(WIN_W, WIN_H);
+    col3(0.04f, 0.09f, 0.26f);
+    glVertex2f(WIN_W, 230);
+    glVertex2f(0, 230);
+    glEnd();
+
+    col3(0.12f, 0.12f, 0.14f);
+    drawRect(0, 0, WIN_W, 230);
+
+    col3(0.20f, 0.20f, 0.23f);
+    drawRect(0, 75, WIN_W, 130);
+
+    col3(0.55f, 0.55f, 0.60f);
+    drawRect(0, 73, WIN_W, 4);
+    drawRect(0, 201, WIN_W, 4);
+
+    col3(0.85f, 0.80f, 0.10f);
+    glLineWidth(2.5f);
+    for (int i = 0; i < WIN_W; i += 90) drawLine((float)i, 138, (float)(i + 55), 138);
+    glLineWidth(1.0f);
+
+    drawClouds();
+}
 // ─── Display ─────────────────────────────────────────────────
 // Render the complete scene (called once per frame)
 static void display()
