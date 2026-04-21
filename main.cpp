@@ -391,42 +391,91 @@ static void drawRadar()
 
     glDisable(GL_BLEND);
 }
-static void drawDrone(float x, float y, bool detected) {
+
+static void drawDrone(float x,float y,bool detected)
+{
+    // Calculate banking (tilting) angle based on frame counter for smooth flight animation
     float bankAngle = sinf(gFrameCounter * 0.05f) * 8.0f;
     
     glPushMatrix();
     glTranslatef(x, y, 0);
-    glRotatef(bankAngle, 0, 0, 1);
-
-    if (detected) {
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        float pulse = 0.5f + 0.3f * sinf(gFrameCounter * 0.1f);
-        col4(1.0f, 0.3f, 0.0f, pulse * 0.25f);
-        drawFilledCircle(0, 0, 30);
+    glRotatef(bankAngle, 0, 0, 1);  // Apply banking rotation
+    
+    // Detection highlight ring with pulsing effect (shows it's been detected)
+    if(detected){
+        glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+        float pulse = 0.5f + 0.3f * sinf(gFrameCounter * 0.1f);  // Pulsing transparency
+        col4(1.0f,0.3f,0.0f,pulse*0.25f); drawFilledCircle(0,0,30);
         glDisable(GL_BLEND);
     }
 
-    col3(0.48f, 0.50f, 0.55f);
+    // Fuselage (main body)
+    col3(0.48f,0.50f,0.55f);
     glBegin(GL_POLYGON);
-    glVertex2f(28, 0);
-    glVertex2f(15, 6);
-    glVertex2f(-28, 5);
-    glVertex2f(-28, -5);
-    glVertex2f(15, -6);
+    glVertex2f(28,0);
+    glVertex2f(15,6);
+    glVertex2f(-28,5);
+    glVertex2f(-28,-5);
+    glVertex2f(15,-6);
     glEnd();
 
-    col3(0.20f, 0.65f, 0.82f);
-    drawFilledCircle(18, 0, 7);
+    // Swept wings (upper and lower)
+    col3(0.42f,0.44f,0.50f);
+    glBegin(GL_TRIANGLES);
+    // upper wing
+    glVertex2f(5,2);   glVertex2f(-15,24); glVertex2f(-20,2);
+    // lower wing
+    glVertex2f(5,-2);   glVertex2f(-15,-24); glVertex2f(-20,-2);
+    glEnd();
 
-    col3(1.0f, 0.0f, 0.0f);
-    drawFilledCircle(-15, 24, 2.5f);
-    col3(0.0f, 1.0f, 0.0f);
-    drawFilledCircle(-15, -24, 2.5f);
+    // Tail fin (vertical)
+    col3(0.38f,0.40f,0.46f);
+    glBegin(GL_TRIANGLES);
+    glVertex2f(-22,0);  glVertex2f(-34,12); glVertex2f(-22,5);
+    glEnd();
 
+    // Cockpit canopy
+    col3(0.20f,0.65f,0.82f);
+    drawFilledCircle(18,0,7);
+    col3(0.55f,0.85f,0.95f);
+    drawFilledCircle(20,2,3);
+
+    // Engine exhaust glow with animation
+    float glowPulse = 0.7f + 0.3f * sinf(gFrameCounter * 0.15f);
+    col3(0.85f,0.45f,0.05f * glowPulse); drawFilledCircle(-28,0,5);
+    col3(1.00f,0.85f,0.10f * glowPulse); drawFilledCircle(-28,0,2.5f);
+
+    // Navigation lights (red port/left, green starboard/right)
+    col3(1.0f,0.0f,0.0f); drawFilledCircle(-15,24,2.5f);
+    col3(0.0f,1.0f,0.0f); drawFilledCircle(-15,-24,2.5f);
+    
     glPopMatrix();
 }
 
+static void spawnParticles(float x,float y)
+{
+    for(int i=0;i<MAX_PARTICLES;i++){
+        if(!gParticles[i].active){
+            float a=(float)(rand()%360)*PI/180.0f;
+            float spd=1.5f+(rand()%40)/10.0f;
+            int ptype = rand()%3; // 0=spark, 1=smoke, 2=debris
+            float r = 1.0f, g = (rand()%10)/10.0f, b = 0.0f;
+            
+            // Customize particle properties based on type
+            if(ptype == 1){ // smoke: gray, slow, drifts upward
+                r = 0.8f; g = 0.8f; b = 0.8f;
+                spd *= 0.6f;
+            } else if(ptype == 2){ // debris: brown, fast ballistic
+                r = 0.7f; g = 0.5f; b = 0.3f;
+                spd *= 1.4f;
+            }
+            // else: spark remains bright yellow/orange, medium speed
+            
+            gParticles[i]={x,y,cosf(a)*spd,sinf(a)*spd,1.0f,r,g,b,ptype,true};
+            static int cnt=0; if(++cnt>=12){ cnt=0; return; }  // Limit 12 particles per burst
+        }
+    }
+}
 // ========== MISSILE ==========
 static void drawMissileProj(float x, float y, float tx, float ty) {
     float angle = atan2f(ty - y, tx - x);
