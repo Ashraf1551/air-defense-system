@@ -179,6 +179,33 @@ static void updateClouds() {
     }
 }
 
+static void drawWindow(float x,float y,float w,float h,bool lit)
+{
+    if(lit){ col3(0.95f,0.85f,0.40f); }
+    else   { col3(0.04f,0.07f,0.18f); }
+    drawRect(x,y,w,h);
+}
+
+static void drawBuilding(float x,float baseY,float w,float h,float dr,float dg,float db)
+{
+    col3(dr,dg,db); drawRect(x,baseY,w,h);
+    // Windows grid
+    int seed=(int)(x*31+h*7);
+    for(float wy=baseY+8; wy<baseY+h-8; wy+=20){
+        for(float wx=x+5; wx<x+w-10; wx+=16){
+            bool lit=(((int)(wx+wy+seed))%3!=0);
+            drawWindow(wx,wy,9,12,lit);
+        }
+    }
+    // Antenna on tall buildings
+    if(h>160){
+        col3(dr,dg,db);
+        drawRect(x+w/2-2,baseY+h,4,20);
+        col3(1.0f,0.2f,0.2f);
+        drawFilledCircle(x+w/2,baseY+h+22,4);
+    }
+}
+
 static void drawBackground()
 {
     // Night sky gradient
