@@ -477,35 +477,67 @@ static void spawnParticles(float x,float y)
     }
 }
 // ========== MISSILE ==========
-static void drawMissileProj(float x, float y, float tx, float ty) {
-    float angle = atan2f(ty - y, tx - x);
+static void drawMissileProj(float x,float y,float tx,float ty)
+{
+    // Calculate rotation angle to point toward target
+    float angle=atan2f(ty-y,tx-x);
     glPushMatrix();
-    glTranslatef(x, y, 0);
-    glRotatef(angle * 180.0f / PI, 0, 0, 1);
+    glTranslatef(x,y,0);
+    glRotatef(angle*180.0f/PI,0,0,1);
 
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 
-    for (int i = 1; i <= 5; i++) {
-        float alpha = 0.4f * (1.0f - i / 5.0f);
-        col4(0.85f, 0.70f, 0.40f, alpha);
-        drawFilledCircle(-8.0f * i, -0.5f, 3.0f + i * 0.5f, 16);
+    // Layered smoke trail effect (progressively fading halos)
+    for(int i = 1; i <= 5; i++){
+        float alpha = 0.4f * (1.0f - i/5.0f);
+        col4(0.85f,0.70f,0.40f,alpha);
+        drawFilledCircle(-8.0f*i,-0.5f,3.0f + i*0.5f, 16);
     }
+
+    // Hot exhaust plume (innermost flame)
+    col4(0.70f,0.30f,0.00f,0.70f);
+    glBegin(GL_TRIANGLES);
+    glVertex2f(-14,-3); glVertex2f(-45,0); glVertex2f(-14,3);
+    glEnd();
+    col4(1.00f,0.65f,0.10f,0.50f);
+    glBegin(GL_TRIANGLES);
+    glVertex2f(-14,-2); glVertex2f(-30,0); glVertex2f(-14,2);
+    glEnd();
 
     glDisable(GL_BLEND);
 
-    col3(0.72f, 0.72f, 0.78f);
-    drawRect(-13, -4, 28, 8);
+    // Body
+    col3(0.72f,0.72f,0.78f); drawRect(-13,-4,28,8);
 
-    col3(0.90f, 0.18f, 0.10f);
+    // Nose cone glow (heat effect)
+    glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+    col4(1.0f, 0.30f, 0.10f, 0.4f);
+    drawFilledCircle(15, 0, 5);
+    glDisable(GL_BLEND);
+
+    // Nose
+    col3(0.90f,0.18f,0.10f);
     glBegin(GL_TRIANGLES);
-    glVertex2f(15, 0);
-    glVertex2f(5, -4);
-    glVertex2f(5, 4);
+    glVertex2f(15,0); glVertex2f(5,-4); glVertex2f(5,4);
     glEnd();
+
+    // Fins
+    col3(0.50f,0.52f,0.60f);
+    glBegin(GL_TRIANGLES);
+    glVertex2f(-10,0); glVertex2f(-18,-10); glVertex2f(-5,0);
+    glEnd();
+    glBegin(GL_TRIANGLES);
+    glVertex2f(-10,0); glVertex2f(-18, 10); glVertex2f(-5,0);
+    glEnd();
+
+    // Band markings
+    col3(0.85f,0.80f,0.10f);
+    drawRect(0,-4,4,8);
+    drawRect(-7,-4,4,8);
 
     glPopMatrix();
 }
+
 
 static void drawExplosion(const Explosion& e) {
     float t = e.radius / e.maxRadius;
