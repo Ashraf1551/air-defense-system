@@ -903,6 +903,32 @@ static void initAll()
     }
 }
 
+static void drawHUD()
+{
+
+    // Controls hint
+    col3(0.55f,0.55f,0.60f);
+    drawText(12,8,"[S] Spawn Drone   [ESC] Quit",GLUT_BITMAP_HELVETICA_12);
+
+    // Paused overlay
+    if(gPaused){
+        glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+        col4(0,0,0,0.5f); drawRect(0,0,WIN_W,WIN_H);
+        glDisable(GL_BLEND);
+        col3(1.0f,1.0f,0.0f);
+        drawText(530,370,"-- PAUSED --");
+        drawText(490,340,"Press P to resume",GLUT_BITMAP_HELVETICA_12);
+    }
+}
+
+static void drawVehicles()
+{
+    for(auto& v:gVehicles){
+        if(v.type==0) drawCar(v.x,v.y,v.r,v.g,v.b);
+        else          drawMotorcycle(v.x,v.y);
+    }
+}
+
 static void display()
 {
     glClear(GL_COLOR_BUFFER_BIT);
