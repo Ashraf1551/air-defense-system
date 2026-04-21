@@ -379,6 +379,73 @@ static void updateParticles() {
     }
 }
 
+static void drawCar(float x,float y,float r,float g,float b)
+{
+    // Headlight beams
+    glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+    col4(1.00f,0.95f,0.60f,0.15f);
+    glBegin(GL_TRIANGLES);
+    glVertex2f(x+74,y+23); glVertex2f(x+120,y+15); glVertex2f(x+120,y+31);
+    glEnd();
+    glDisable(GL_BLEND);
+    
+    // Body
+    col3(r,g,b); drawRect(x,y+10,82,30);
+    // Roof
+    col3(r*0.78f,g*0.78f,b*0.78f); drawRect(x+14,y+38,52,22);
+    // Windows
+    col3(0.55f,0.78f,0.92f);
+    drawRect(x+18,y+40,19,16);
+    drawRect(x+41,y+40,19,16);
+    // Wheels
+    col3(0.12f,0.12f,0.12f);
+    drawFilledCircle(x+17,y+11,12);
+    drawFilledCircle(x+65,y+11,12);
+    col3(0.45f,0.45f,0.45f);
+    drawFilledCircle(x+17,y+11,6);
+    drawFilledCircle(x+65,y+11,6);
+    // Hub
+    col3(0.72f,0.72f,0.72f);
+    drawFilledCircle(x+17,y+11,3);
+    drawFilledCircle(x+65,y+11,3);
+    // Headlight
+    col3(1.00f,1.00f,0.65f); drawRect(x+74,y+20,7,7);
+    // Tail light
+    col3(0.90f,0.10f,0.10f); drawRect(x,  y+20,5,7);
+}
+
+static void drawMotorcycle(float x,float y)
+{
+    // Frame
+    col3(0.18f,0.18f,0.22f); drawRect(x+8,y+14,38,20);
+    // Fuel tank
+    col3(0.60f,0.08f,0.08f); drawRect(x+15,y+30,22,14);
+    // Front fork
+    col3(0.30f,0.30f,0.35f); drawRect(x+38,y+10,5,25);
+    // Wheels
+    col3(0.12f,0.12f,0.12f);
+    drawFilledCircle(x+12,y+11,12);
+    drawFilledCircle(x+46,y+11,12);
+    col3(0.40f,0.40f,0.40f);
+    drawFilledCircle(x+12,y+11,5);
+    drawFilledCircle(x+46,y+11,5);
+    // Rider body
+    col3(0.25f,0.25f,0.32f); drawRect(x+18,y+32,14,24);
+    // Head
+    col3(0.80f,0.62f,0.44f); drawFilledCircle(x+25,y+60,9);
+    // Helmet
+    col3(0.08f,0.08f,0.14f);
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2f(x+25,y+63);
+    for(int i=0;i<=18;i++){
+        float a=PI+PI*i/18.0f;
+        glVertex2f(x+25+11*cosf(a), y+63+10*sinf(a));
+    }
+    glEnd();
+    // Visor
+    col3(0.15f,0.55f,0.75f); drawRect(x+17,y+57,16,6);
+}
+
 // ─── Display ─────────────────────────────────────────────────
 // Render the complete scene (called once per frame)
 static void display()
