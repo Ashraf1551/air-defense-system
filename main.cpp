@@ -89,26 +89,6 @@ int  gFrameCounter   = 0;                          // Master frame counter for a
 float gStarX[200], gStarY[200];                    // Random star positions
 float gStreetLights[20][2];                        // Street light coordinates
 
-// ─── Forward Declarations ────────────────────────────────────
-// Placeholder functions to be implemented in later commits
-static void drawBackground();
-static void drawCitySkyline();
-static void drawDefenseVehicle();
-static void drawRadar();
-static void drawDrone(float x, float y, bool detected);
-static void drawMissileProj(float x, float y, float tx, float ty);
-static void drawExplosion(const Explosion& e);
-static void drawParticles();
-static void drawVehicles();
-static void drawHUD();
-
-static void updateClouds();
-static void updateParticles();
-static void display();
-static void reshape(int w, int h);
-static void keyboard(unsigned char key, int, int);
-static void update(int);
-static void initAll();
 
 // ─── Helpers ─────────────────────────────────────────────────
 // Calculate Euclidean distance between two points
@@ -162,15 +142,22 @@ static void drawText(float x, float y, const char* s, void* font = GLUT_BITMAP_H
     glRasterPos2f(x, y);
     for (; *s; s++) glutBitmapCharacter(font, *s);
 }
-static void drawCloud(float cx, float cy, float scale) {
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    col4(200.0f / 255.0f, 232.0f / 255.0f, 245.0f / 255.0f, 0.65f);
+static void drawCloud(float cx, float cy, float scale)
+{
+    glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    col4(200.0f/255.0f, 232.0f/255.0f, 245.0f/255.0f, 0.65f);
     
-    float radius = 18.0f * scale;
-    drawFilledCircle(cx, cy, 0.07f * radius, 20);
-    drawFilledCircle(cx - 0.06f * radius, cy, 0.07f * radius, 20);
-    drawFilledCircle(cx + 0.06f * radius, cy, 0.07f * radius, 20);
+    float radius = 18.0f * scale; 
+    
+    drawFilledCircle(cx + 0*radius, cy + 0.08f*radius, 0.07f*radius, 20);
+    drawFilledCircle(cx - 0.06f*radius, cy + 0.08f*radius, 0.07f*radius, 20);
+    drawFilledCircle(cx + 0.06f*radius, cy + 0.085f*radius, 0.07f*radius, 20);
+    drawFilledCircle(cx - 0.06f*2*radius, cy + 0.08f*radius, 0.07f*radius, 20);
+    drawFilledCircle(cx + 0.05f*2*radius, cy + 0.08f*radius, 0.07f*radius, 20);
+    drawFilledCircle(cx - 0.04f*2*radius, cy + 0.06f*2*radius, 0.07f*radius, 20);
+    drawFilledCircle(cx + 0.05f*2*radius, cy + 0.05f*2*radius, 0.07f*radius, 20);
+    drawFilledCircle(cx + 0.03f*radius, cy + 0.065f*2*radius, 0.07f*radius, 20);
+    drawFilledCircle(cx - 0.05f*3*radius, cy + 0.04f*2*radius, 0.07f*radius, 20);
     
     glDisable(GL_BLEND);
 }
@@ -192,32 +179,82 @@ static void updateClouds() {
     }
 }
 
-static void drawBackground() {
+static void drawBackground()
+{
+    // Night sky gradient
     glBegin(GL_QUADS);
-    col3(0.01f, 0.04f, 0.16f);
-    glVertex2f(0, WIN_H);
-    glVertex2f(WIN_W, WIN_H);
-    col3(0.04f, 0.09f, 0.26f);
-    glVertex2f(WIN_W, 230);
-    glVertex2f(0, 230);
+    col3(0.01f,0.04f,0.16f); glVertex2f(0,WIN_H); glVertex2f(WIN_W,WIN_H);
+    col3(0.04f,0.09f,0.26f); glVertex2f(WIN_W,230); glVertex2f(0,230);
     glEnd();
 
-    col3(0.12f, 0.12f, 0.14f);
-    drawRect(0, 0, WIN_W, 230);
+    // Ground
+    col3(0.12f,0.12f,0.14f); drawRect(0,0,WIN_W,230);
 
-    col3(0.20f, 0.20f, 0.23f);
-    drawRect(0, 75, WIN_W, 130);
+    // Road surface
+    col3(0.20f,0.20f,0.23f); drawRect(0,75,WIN_W,130);
 
-    col3(0.55f, 0.55f, 0.60f);
-    drawRect(0, 73, WIN_W, 4);
-    drawRect(0, 201, WIN_W, 4);
+    // Road edges
+    col3(0.55f,0.55f,0.60f); drawRect(0,73,WIN_W,4);
+    col3(0.55f,0.55f,0.60f); drawRect(0,201,WIN_W,4);
 
-    col3(0.85f, 0.80f, 0.10f);
+    // Centre dashes
+    col3(0.85f,0.80f,0.10f);
     glLineWidth(2.5f);
-    for (int i = 0; i < WIN_W; i += 90) drawLine((float)i, 138, (float)(i + 55), 138);
+    for(int i=0;i<WIN_W;i+=90) drawLine((float)i,138,(float)(i+55),138);
     glLineWidth(1.0f);
 
+    // Stars
+    glPointSize(2.0f);
+    glBegin(GL_POINTS);
+    for(int i=0;i<200;i++){
+        float brt=0.5f+0.5f*(i%3)/2.0f;
+        col3(brt,brt,brt);
+        glVertex2f(gStarX[i],gStarY[i]);
+    }
+    glEnd();
+    glPointSize(1.0f);
+
+    // Moon with enhanced design
+    glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+    
+    // Atmospheric glow halo (outer)
+    col4(0.98f,0.95f,0.80f,0.08f); drawFilledCircle(1110,630,58);
+    col4(0.98f,0.95f,0.80f,0.04f); drawFilledCircle(1110,630,70);
+    
+    // Main moon surface with gradient
+    col3(0.93f,0.93f,0.78f); drawFilledCircle(1110,630,42);
+    
+    // Surface highlights (bright areas)
+    col4(0.98f,0.98f,0.88f,0.6f); drawFilledCircle(1095,640,12);
+    col4(0.95f,0.95f,0.85f,0.4f); drawFilledCircle(1115,620,8);
+    col4(0.96f,0.96f,0.86f,0.35f); drawFilledCircle(1105,615,6);
+    
+    // Surface craters (dark spots for lunar texture)
+    col4(0.75f,0.75f,0.68f,0.7f); drawFilledCircle(1120,635,5);
+    col4(0.78f,0.78f,0.70f,0.6f); drawFilledCircle(1100,625,4);
+    col4(0.76f,0.76f,0.69f,0.5f); drawFilledCircle(1115,610,3);
+    col4(0.80f,0.80f,0.72f,0.55f); drawFilledCircle(1095,615,3.5f);
+    col4(0.77f,0.77f,0.70f,0.6f); drawFilledCircle(1125,620,2.5f);
+    col4(0.79f,0.79f,0.71f,0.5f); drawFilledCircle(1105,642,3);
+    col4(0.75f,0.75f,0.67f,0.65f); drawFilledCircle(1118,642,2);
+    
+    // Crater shadows for depth
+    col4(0.65f,0.65f,0.58f,0.8f); drawFilledCircle(1120,636,2);
+    col4(0.68f,0.68f,0.60f,0.7f); drawFilledCircle(1100,626,1.5f);
+    
+    // Crescent shadow (night side of moon)
+    col4(0.10f,0.14f,0.34f,0.9f); drawFilledCircle(1128,637,37);
+    
+    // Subtle shadow gradient on lit side
+    col4(0.85f,0.85f,0.75f,0.2f); drawFilledCircle(1120,630,20);
+    
+    glDisable(GL_BLEND);
+    
+    // Clouds
     drawClouds();
+    
+    // Street lights
+    drawStreetLights();
 }
 
 // ========== CITY SKYLINE ==========
