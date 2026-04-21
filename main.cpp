@@ -268,12 +268,82 @@ static void drawRadar() {
 
     glDisable(GL_BLEND);
 }
+static void drawDrone(float x, float y, bool detected) {
+    float bankAngle = sinf(gFrameCounter * 0.05f) * 8.0f;
+    
+    glPushMatrix();
+    glTranslatef(x, y, 0);
+    glRotatef(bankAngle, 0, 0, 1);
+
+    if (detected) {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        float pulse = 0.5f + 0.3f * sinf(gFrameCounter * 0.1f);
+        col4(1.0f, 0.3f, 0.0f, pulse * 0.25f);
+        drawFilledCircle(0, 0, 30);
+        glDisable(GL_BLEND);
+    }
+
+    col3(0.48f, 0.50f, 0.55f);
+    glBegin(GL_POLYGON);
+    glVertex2f(28, 0);
+    glVertex2f(15, 6);
+    glVertex2f(-28, 5);
+    glVertex2f(-28, -5);
+    glVertex2f(15, -6);
+    glEnd();
+
+    col3(0.20f, 0.65f, 0.82f);
+    drawFilledCircle(18, 0, 7);
+
+    col3(1.0f, 0.0f, 0.0f);
+    drawFilledCircle(-15, 24, 2.5f);
+    col3(0.0f, 1.0f, 0.0f);
+    drawFilledCircle(-15, -24, 2.5f);
+
+    glPopMatrix();
+}
+
+// ========== MISSILE ==========
+static void drawMissileProj(float x, float y, float tx, float ty) {
+    float angle = atan2f(ty - y, tx - x);
+    glPushMatrix();
+    glTranslatef(x, y, 0);
+    glRotatef(angle * 180.0f / PI, 0, 0, 1);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    for (int i = 1; i <= 5; i++) {
+        float alpha = 0.4f * (1.0f - i / 5.0f);
+        col4(0.85f, 0.70f, 0.40f, alpha);
+        drawFilledCircle(-8.0f * i, -0.5f, 3.0f + i * 0.5f, 16);
+    }
+
+    glDisable(GL_BLEND);
+
+    col3(0.72f, 0.72f, 0.78f);
+    drawRect(-13, -4, 28, 8);
+
+    col3(0.90f, 0.18f, 0.10f);
+    glBegin(GL_TRIANGLES);
+    glVertex2f(15, 0);
+    glVertex2f(5, -4);
+    glVertex2f(5, 4);
+    glEnd();
+
+    glPopMatrix();
+}
+
 // ─── Display ─────────────────────────────────────────────────
 // Render the complete scene (called once per frame)
 static void display()
 {
     glClear(GL_COLOR_BUFFER_BIT);
     // Placeholder - will be populated in commit 10
+    drawCitySkyline();
+    drawRadar();
+    // ... other drawing functions
     glutSwapBuffers();
 }
 
