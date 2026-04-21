@@ -445,7 +445,20 @@ static void drawMotorcycle(float x,float y)
     // Visor
     col3(0.15f,0.55f,0.75f); drawRect(x+17,y+57,16,6);
 }
-
+static void spawnDrone()//swapdron
+{
+    for(auto& d:gDrones){
+        if(!d.active){
+            d.x       = (float)(WIN_W+60);                          // Start off right edge
+            d.y       = 420.0f+(rand()%180);                        // Random altitude - moved up higher
+            d.speed   = 1.4f+(rand()%25)/10.0f;                    // Variable speed
+            d.active  = true;
+            d.detected= false;
+            d.missileAssigned=-1;
+            return;
+        }
+    }
+}
 // ─── Display ─────────────────────────────────────────────────
 // Render the complete scene (called once per frame)
 static void display()
