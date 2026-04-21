@@ -219,6 +219,55 @@ static void drawBackground() {
 
     drawClouds();
 }
+
+// ========== CITY SKYLINE ==========
+static void drawCitySkyline() {
+    // Simple buildings
+    float buildings[][6] = {
+        {0, 55, 190, 0.07f, 0.11f, 0.26f},
+        {50, 48, 155, 0.08f, 0.13f, 0.29f},
+        {95, 65, 215, 0.06f, 0.10f, 0.24f},
+    };
+    
+    for (auto& b : buildings) {
+        col3(b[3], b[4], b[5]);
+        drawRect(b[0], 230, b[1], b[2]);
+    }
+}
+
+// ========== RADAR ==========
+static void drawRadar() {
+    float cx = RADAR_X, cy = RADAR_Y, r = RADAR_R;
+    float sweepRad = gRadarAngle * PI / 180.0f;
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    col4(0.00f, 0.06f, 0.00f, 0.95f);
+    drawFilledCircle(cx, cy, r);
+
+    glLineWidth(1.0f);
+    for (int i = 1; i <= 4; i++) {
+        col4(0.00f, 0.45f, 0.12f, 0.6f);
+        drawCircleOutline(cx, cy, r * (float)i / 4.0f);
+    }
+
+    col4(0.00f, 0.80f, 0.20f, 0.3f);
+    glLineWidth(4.0f);
+    drawLine(cx, cy, cx + r * cosf(sweepRad), cy + r * sinf(sweepRad));
+    
+    col4(0.10f, 0.70f, 0.25f, 1.0f);
+    glLineWidth(3.0f);
+    drawCircleOutline(cx, cy, r);
+    glLineWidth(1.0f);
+
+    col4(0.60f, 1.00f, 0.70f, 0.5f);
+    drawFilledCircle(cx, cy, 8);
+    col4(0.30f, 1.00f, 0.50f, 1.0f);
+    drawFilledCircle(cx, cy, 5);
+
+    glDisable(GL_BLEND);
+}
 // ─── Display ─────────────────────────────────────────────────
 // Render the complete scene (called once per frame)
 static void display()
