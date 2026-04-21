@@ -459,6 +459,7 @@ static void spawnDrone()//swapdron
         }
     }
 }
+
 // ─── Display ─────────────────────────────────────────────────
 // Render the complete scene (called once per frame)
 static void display()
@@ -498,12 +499,85 @@ static void keyboard(unsigned char key, int, int)
 // Main game logic update called every 16ms (~60 fps)
 static void update(int)
 {
-    if (!gPaused) {
+    if(!gPaused){
+
+        // Increment frame counter for animations (used for sine-wave effects)
         gFrameCounter++;
-        if (gFrameCounter > 10000) gFrameCounter = 0;
+        if(gFrameCounter > 10000) gFrameCounter = 0;  // Prevent overflow
+
+        // Rotate radar sweep continuously
+        gRadarAngle+=2.2f;
+        if(gRadarAngle>=360.0f) gRadarAngle-=360.0f;
+
+        // Update cloud positions (parallax scrolling)
+        updateClouds();
+
+        // Auto-spawn drones at increasing difficulty
+        gSpawnTimer++;
+        if(gSpawnTimer>=gSpawnInterval){
+            spawnDrone();
+            gSpawnTimer=0;
+            // Slightly increase rate over time (more drones faster)
+            if(gSpawnInterval>80) gSpawnInterval--;
+        }
+
+        // Update drone positions and detection
+        for(int i=0;i<MAX_DRONES;i++){
+            auto& d=gDrones[i];
+            if(!d.active) continue;
+            d.x-=d.speed;  // Move drone left across screen
+            if(d.x<-80){ d.active=false; continue; }  // Remove when off-screen
+
+            // Check if radar detects this drone
+            if(!d.detected){
+                float dist=fDist(d.x,d.y,RADAR_X,RADAR_Y);
+                if(dist<RADAR_DETECT_RANGE){
+                    d.detected=true;
+                    launchMissile(i);  // Automatically launch missile
+                }
+            }
+        }
+
+        // Update missile positions and collision detection
+        for(auto& m:gMissiles){
+            if(!m.active) continue;
+            int ti=m.targetIdx;
+            if(ti<0||!gDrones[ti].active){ m.active=false; continue; }  // Invalid target
+
+            float tx=gDrones[ti].x, ty=gDrones[ti].y;
+            float d=fDist(m.x,m.y,tx,ty);
+            if(d<18.0f){
+                // HIT! Missile reached target
+                addExplosion(tx,ty);
+                gDrones[ti].active=false;
+                m.active=false;
+                gScore+=10;  // Award points
+            } else {
+                // Move missile toward target
+                m.x+=(tx-m.x)/d*m.speed;
+                m.y+=(ty-m.y)/d*m.speed;
+            }
+        }
+
+        // Update explosion radius expansion
+        for(auto& e:gExplosions){
+            if(!e.active) continue;
+            e.radius+=1.8f; e.frame++;
+            if(e.radius>e.maxRadius) e.active=false;
+        }
+
+        // Update all particles physics and fade
+        updateParticles();
+
+        // Update vehicle positions on road
+        for(auto& v:gVehicles){
+            v.x+=v.speed;
+            if(v.x>WIN_W+120) v.x=-120;  // Wrap around
+        }
     }
+
     glutPostRedisplay();
-    glutTimerFunc(16, update, 0);
+    glutTimerFunc(16,update,0); // ~60 fps (16ms per frame)
 }
 
 // ─── Initialization ──────────────────────────────────────────
