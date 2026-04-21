@@ -474,24 +474,24 @@ static void display()
 
 // ─── Reshape ─────────────────────────────────────────────────
 // Handle window resizing - maintains 2D orthographic projection
-static void reshape(int w, int h)
+static void reshape(int w,int h)
 {
-    glViewport(0, 0, w, h);
-    glMatrixMode(GL_PROJECTION);
+    glViewport(0,0,w,h);              // Update viewport to window size
+    glMatrixMode(GL_PROJECTION); 
     glLoadIdentity();
-    gluOrtho2D(0, WIN_W, 0, WIN_H);
-    glMatrixMode(GL_MODELVIEW);
+    gluOrtho2D(0,WIN_W,0,WIN_H);      // Set up 2D coordinate system
+    glMatrixMode(GL_MODELVIEW);  
     glLoadIdentity();
 }
 
 // ─── Input ───────────────────────────────────────────────────
 // Handle keyboard input for player controls
-static void keyboard(unsigned char key, int, int)
+static void keyboard(unsigned char key,int,int)
 {
-    switch (key) {
-        case 27:  exit(0); break;
-        case 's': case 'S': break; // Placeholder
-        case 'p': case 'P': gPaused = !gPaused; break;
+    switch(key){
+        case 27:  exit(0); break;                    // ESC → Quit program
+        case 's': case 'S': spawnDrone(); break;     // S → Manual drone spawn
+        case 'p': case 'P': gPaused=!gPaused; break; // P → Toggle pause
     }
 }
 
