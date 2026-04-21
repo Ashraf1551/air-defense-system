@@ -89,26 +89,6 @@ int  gFrameCounter   = 0;                          // Master frame counter for a
 float gStarX[200], gStarY[200];                    // Random star positions
 float gStreetLights[20][2];                        // Street light coordinates
 
-// ─── Forward Declarations ────────────────────────────────────
-// Placeholder functions to be implemented in later commits
-static void drawBackground();
-static void drawCitySkyline();
-static void drawDefenseVehicle();
-static void drawRadar();
-static void drawDrone(float x, float y, bool detected);
-static void drawMissileProj(float x, float y, float tx, float ty);
-static void drawExplosion(const Explosion& e);
-static void drawParticles();
-static void drawVehicles();
-static void drawHUD();
-
-static void updateClouds();
-static void updateParticles();
-static void display();
-static void reshape(int w, int h);
-static void keyboard(unsigned char key, int, int);
-static void update(int);
-static void initAll();
 
 // ─── Helpers ─────────────────────────────────────────────────
 // Calculate Euclidean distance between two points
@@ -162,15 +142,22 @@ static void drawText(float x, float y, const char* s, void* font = GLUT_BITMAP_H
     glRasterPos2f(x, y);
     for (; *s; s++) glutBitmapCharacter(font, *s);
 }
-static void drawCloud(float cx, float cy, float scale) {
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    col4(200.0f / 255.0f, 232.0f / 255.0f, 245.0f / 255.0f, 0.65f);
+static void drawCloud(float cx, float cy, float scale)
+{
+    glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    col4(200.0f/255.0f, 232.0f/255.0f, 245.0f/255.0f, 0.65f);
     
-    float radius = 18.0f * scale;
-    drawFilledCircle(cx, cy, 0.07f * radius, 20);
-    drawFilledCircle(cx - 0.06f * radius, cy, 0.07f * radius, 20);
-    drawFilledCircle(cx + 0.06f * radius, cy, 0.07f * radius, 20);
+    float radius = 18.0f * scale; 
+    
+    drawFilledCircle(cx + 0*radius, cy + 0.08f*radius, 0.07f*radius, 20);
+    drawFilledCircle(cx - 0.06f*radius, cy + 0.08f*radius, 0.07f*radius, 20);
+    drawFilledCircle(cx + 0.06f*radius, cy + 0.085f*radius, 0.07f*radius, 20);
+    drawFilledCircle(cx - 0.06f*2*radius, cy + 0.08f*radius, 0.07f*radius, 20);
+    drawFilledCircle(cx + 0.05f*2*radius, cy + 0.08f*radius, 0.07f*radius, 20);
+    drawFilledCircle(cx - 0.04f*2*radius, cy + 0.06f*2*radius, 0.07f*radius, 20);
+    drawFilledCircle(cx + 0.05f*2*radius, cy + 0.05f*2*radius, 0.07f*radius, 20);
+    drawFilledCircle(cx + 0.03f*radius, cy + 0.065f*2*radius, 0.07f*radius, 20);
+    drawFilledCircle(cx - 0.05f*3*radius, cy + 0.04f*2*radius, 0.07f*radius, 20);
     
     glDisable(GL_BLEND);
 }
