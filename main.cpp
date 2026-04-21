@@ -476,30 +476,59 @@ static void drawExplosion(const Explosion& e) {
 }
 
 // ========== PARTICLES ==========
-static void drawParticles() {
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+static void drawParticles()
+{
+    glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+    
+    // Draw spark particles as bright points
     glPointSize(4.5f);
     glBegin(GL_POINTS);
-    for (auto& p : gParticles) {
-        if (p.active && p.type == 0) {
-            col4(p.r, p.g, p.b, p.life);
-            glVertex2f(p.x, p.y);
+    for(auto& p:gParticles){
+        if(p.active && p.type == 0){
+            col4(p.r,p.g,p.b,p.life);
+            glVertex2f(p.x,p.y);
         }
     }
     glEnd();
+    
+    // Draw smoke particles as expanding circles (soft billowing effect)
+    for(auto& p:gParticles){
+        if(p.active && p.type == 1){
+            col4(p.r,p.g,p.b,p.life*0.4f);
+            drawFilledCircle(p.x,p.y,2.5f+p.life*2.0f,12);
+        }
+    }
+    
+    // Draw debris particles as solid points
+    glPointSize(6.0f);
+    glBegin(GL_POINTS);
+    for(auto& p:gParticles){
+        if(p.active && p.type == 2){
+            col4(p.r,p.g,p.b,p.life*0.8f);
+            glVertex2f(p.x,p.y);
+        }
+    }
+    glEnd();
+    
     glPointSize(1.0f);
     glDisable(GL_BLEND);
 }
 
-static void updateParticles() {
-    for (auto& p : gParticles) {
-        if (!p.active) continue;
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vy -= 0.08f;
-        p.life -= 0.025f;
-        if (p.life <= 0) p.active = false;
+static void updateParticles()
+{
+    for(auto& p:gParticles){
+        if(!p.active) continue;
+        p.x+=p.vx; p.y+=p.vy;
+        
+        if(p.type == 1){ // smoke: rises and dissipates horizontally
+            p.vy += 0.04f;
+            p.vx *= 0.98f;  // Air resistance
+        } else {
+            p.vy-=0.08f; // gravity for sparks and debris
+        }
+        
+        p.life-=0.025f;  // Fade out over time
+        if(p.life<=0) p.active=false;
     }
 }
 
