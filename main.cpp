@@ -523,7 +523,32 @@ static void spawnDrone()//swapdron
         }
     }
 }
-
+static void drawStreetLights()
+{
+    col3(0.15f, 0.15f, 0.18f);
+    for(int i = 0; i < 20; i++){
+        float sx = gStreetLights[i][0];
+        float sy = gStreetLights[i][1];
+        
+        // Light pole structure
+        drawRect(sx - 2, sy, 4, 32);
+        
+        // Light fixture head
+        col3(0.30f, 0.30f, 0.35f);
+        drawFilledCircle(sx, sy + 32, 8);
+        
+        // Glow effect (multiple transparent halos around bulb)
+        glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        col4(1.00f, 0.95f, 0.70f, 0.15f);  // Warm yellow glow
+        drawFilledCircle(sx, sy + 32, 16);
+        col4(1.00f, 0.95f, 0.70f, 0.08f);  // Outer dim halo
+        drawFilledCircle(sx, sy + 32, 24);
+        glDisable(GL_BLEND);
+        
+        // Light bulb
+        col3(0.15f, 0.15f, 0.18f);
+    }
+}
 // ─── Display ─────────────────────────────────────────────────
 // Render the complete scene (called once per frame)
 static void display()
