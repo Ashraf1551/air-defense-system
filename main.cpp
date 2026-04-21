@@ -67,7 +67,7 @@ float gRadarAngle   = 0.0f;
 const float RADAR_X = 100.0f;                      // Radar center X position (top-left)
 const float RADAR_Y = 580.0f;                      // Radar center Y position (top-left)
 const float RADAR_R = 88.0f;                       // Radar display radius on screen
-const float RADAR_DETECT_RANGE = 420.0f;           // World-space detection radius
+const float RADAR_DETECT_RANGE = 580.0f;           // World-space detection radius (increased)
 
 // // Game entity arrays (pool allocation for efficiency)
 Drone      gDrones    [MAX_DRONES];                // Enemy drones
@@ -78,7 +78,6 @@ Vehicle    gVehicles  [5];                         // Road traffic (cars/motorcy
 Cloud      gClouds    [20];                        // Parallax cloud layer (expanded)
 
 // Game state
-int  gScore          = 0;                          // Player's current score
 int  gSpawnTimer     = 0;                          // Counter for drone spawning
 int  gSpawnInterval  = 200;                        // Frames between auto-spawns
 bool gPaused         = false;                      // Pause toggle
@@ -232,17 +231,26 @@ static void drawBackground()
     // Ground
     col3(0.12f,0.12f,0.14f); drawRect(0,0,WIN_W,230);
 
-    // Road surface
-    col3(0.20f,0.20f,0.23f); drawRect(0,75,WIN_W,130);
+    // Road surface with gradient effect
+    col3(0.18f,0.18f,0.20f); drawRect(0,75,WIN_W,65);
+    col3(0.22f,0.22f,0.25f); drawRect(0,140,WIN_W,65);
 
-    // Road edges
-    col3(0.55f,0.55f,0.60f); drawRect(0,73,WIN_W,4);
-    col3(0.55f,0.55f,0.60f); drawRect(0,201,WIN_W,4);
+    // Road edges (white)
+    col3(0.70f,0.70f,0.75f); drawRect(0,73,WIN_W,4);
+    col3(0.70f,0.70f,0.75f); drawRect(0,201,WIN_W,4);
 
-    // Centre dashes
-    col3(0.85f,0.80f,0.10f);
-    glLineWidth(2.5f);
-    for(int i=0;i<WIN_W;i+=90) drawLine((float)i,138,(float)(i+55),138);
+    // Lane divider - dashed yellow line (center)
+    col3(0.90f,0.85f,0.15f);
+    glLineWidth(2.0f);
+    for(int i=0;i<WIN_W;i+=80) drawLine((float)i,138,(float)(i+50),138);
+    
+    // Side lane markings (subtle)
+    col3(0.60f,0.58f,0.10f);
+    glLineWidth(1.0f);
+    for(int i=0;i<WIN_W;i+=100) {
+        drawLine((float)i,105,(float)(i+40),105);
+        drawLine((float)i,171,(float)(i+40),171);
+    }
     glLineWidth(1.0f);
 
     // Stars
@@ -294,9 +302,6 @@ static void drawBackground()
     
     // Clouds
     drawClouds();
-    
-    // Street lights
-    drawStreetLights();
 }
 
 // ─── City Skyline ────────────────────────────────────────────
@@ -383,14 +388,6 @@ static void drawDefenseVehicle()
     // Support rollers (small upper wheels)
     col3(0.20f,0.20f,0.20f);
     for(int i=1;i<7;i++) drawFilledCircle(BX+5+i*25.0f,BY-3,6);
-    
-    // Drive sprocket (front wheel)
-    col3(0.25f,0.25f,0.25f); drawFilledCircle(BX+200,BY+15,16);
-    col3(0.12f,0.12f,0.12f); drawFilledCircle(BX+200,BY+15,10);
-    
-    // Idler wheel (rear)
-    col3(0.24f,0.24f,0.24f); drawFilledCircle(BX-5,BY+15,15);
-    col3(0.11f,0.11f,0.11f); drawFilledCircle(BX-5,BY+15,9);
 
     // === Lower Hull - Armored base ===
     // Hull bottom (sloped sides for armor)
@@ -674,14 +671,19 @@ static void drawRadar()
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 
-    // Background with pulsing effect
+    // Background with pulsing effect - lighter green
     float bgPulse = 0.95f + 0.05f * sinf(gFrameCounter * 0.05f);
-    col4(0.00f,0.06f,0.00f,bgPulse); drawFilledCircle(cx,cy,r);
+    col4(0.02f,0.12f,0.02f,bgPulse); drawFilledCircle(cx,cy,r);
+    
+    // Subtle radial gradient shading (lighter outer ring)
+    glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+    col4(0.05f,0.18f,0.05f,0.15f);
+    drawFilledCircle(cx,cy,r);
 
-    // Concentric rings with enhanced glow
+    // Concentric rings with enhanced glow - lighter color
     glLineWidth(1.0f);
     for(int i=1;i<=4;i++){
-        col4(0.00f,0.45f,0.12f,0.6f);
+        col4(0.10f,0.55f,0.20f,0.65f);
         drawCircleOutline(cx,cy,r*(float)i/4.0f);
     }
     // Cross hairs
@@ -974,69 +976,322 @@ static void updateParticles()
 
 static void drawCar(float x,float y,float r,float g,float b)
 {
-    // Headlight beams
+    glPushMatrix();
+    glTranslatef(x+41,y+26,0);  // Center of car
+    
+    // Undercarriage shadow
     glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-    col4(1.00f,0.95f,0.60f,0.15f);
-    glBegin(GL_TRIANGLES);
-    glVertex2f(x+74,y+23); glVertex2f(x+120,y+15); glVertex2f(x+120,y+31);
+    col4(0.0f,0.0f,0.0f,0.2f);
+    glBegin(GL_POLYGON);
+    glVertex2f(-40,-16); glVertex2f(40,-16);
+    glVertex2f(40,-14); glVertex2f(-40,-14);
     glEnd();
     glDisable(GL_BLEND);
     
-    // Body
-    col3(r,g,b); drawRect(x,y+10,82,30);
-    // Roof
-    col3(r*0.78f,g*0.78f,b*0.78f); drawRect(x+14,y+38,52,22);
-    // Windows
-    col3(0.55f,0.78f,0.92f);
-    drawRect(x+18,y+40,19,16);
-    drawRect(x+41,y+40,19,16);
-    // Wheels
+    // === MAIN CAR BODY (Improved proportions) ===
+    // Body shell with better sedan profile
+    col3(r,g,b);
+    glBegin(GL_POLYGON);
+    // Front bumper area (wider)
+    glVertex2f(-38,0);
+    glVertex2f(-36,8);
+    // Hood taper
+    glVertex2f(-20,10);
+    glVertex2f(0,12);
+    glVertex2f(20,10);
+    // Roof line
+    glVertex2f(36,8);
+    glVertex2f(38,0);
+    // Rear bumper
+    glVertex2f(36,-6);
+    glVertex2f(-36,-6);
+    glEnd();
+    
+    // Side skirt (darker accent line)
+    col3(r*0.65f,g*0.65f,b*0.65f);
+    glBegin(GL_QUADS);
+    glVertex2f(-36,-5); glVertex2f(36,-5);
+    glVertex2f(36,-2); glVertex2f(-36,-2);
+    glEnd();
+    
+    // === ROOF SECTION ===
+    col3(r*0.75f,g*0.75f,b*0.75f);
+    glBegin(GL_POLYGON);
+    glVertex2f(-20,10);
+    glVertex2f(-22,22);
+    glVertex2f(22,22);
+    glVertex2f(20,10);
+    glEnd();
+    
+    // === WINDSHIELDS ===
+    // Front windshield (angled)
+    col3(0.40f,0.70f,0.95f);
+    glBegin(GL_POLYGON);
+    glVertex2f(-16,10);
+    glVertex2f(-12,22);
+    glVertex2f(12,22);
+    glVertex2f(16,10);
+    glEnd();
+    col3(0.60f,0.80f,1.00f);
+    glBegin(GL_POLYGON);
+    glVertex2f(-15,11);
+    glVertex2f(-11,21);
+    glVertex2f(11,21);
+    glVertex2f(15,11);
+    glEnd();
+    
+    // Rear windshield
+    col3(0.40f,0.70f,0.95f);
+    glBegin(GL_POLYGON);
+    glVertex2f(-16,10);
+    glVertex2f(-20,22);
+    glVertex2f(-8,22);
+    glVertex2f(0,10);
+    glEnd();
+    col3(0.50f,0.75f,0.92f);
+    glBegin(GL_POLYGON);
+    glVertex2f(-15,11);
+    glVertex2f(-19,21);
+    glVertex2f(-9,21);
+    glVertex2f(-1,11);
+    glEnd();
+    
+    // === SIDE MIRRORS ===
+    col3(0.35f,0.35f,0.40f);
+    glBegin(GL_QUADS);
+    glVertex2f(-22,12); glVertex2f(-20,12);
+    glVertex2f(-20,18); glVertex2f(-22,18);
+    glEnd();
+    col3(0.55f,0.70f,0.85f);
+    glBegin(GL_QUADS);
+    glVertex2f(-21,13); glVertex2f(-20.5f,13);
+    glVertex2f(-20.5f,17); glVertex2f(-21,17);
+    glEnd();
+    
+    // === BUMPERS ===
+    // Front bumper detail
+    col3(0.25f,0.25f,0.30f);
+    glBegin(GL_QUADS);
+    glVertex2f(-36,0); glVertex2f(36,0);
+    glVertex2f(36,2); glVertex2f(-36,2);
+    glEnd();
+    
+    // Rear bumper detail
+    glBegin(GL_QUADS);
+    glVertex2f(-36,-6); glVertex2f(36,-6);
+    glVertex2f(36,-4); glVertex2f(-36,-4);
+    glEnd();
+    
+    // === WHEELS ===
+    // Front wheel
+    glPushMatrix();
+    glTranslatef(-22,-15,0);
+    
+    // Tire (black)
     col3(0.12f,0.12f,0.12f);
-    drawFilledCircle(x+17,y+11,12);
-    drawFilledCircle(x+65,y+11,12);
-    col3(0.45f,0.45f,0.45f);
-    drawFilledCircle(x+17,y+11,6);
-    drawFilledCircle(x+65,y+11,6);
-    // Hub
-    col3(0.72f,0.72f,0.72f);
-    drawFilledCircle(x+17,y+11,3);
-    drawFilledCircle(x+65,y+11,3);
-    // Headlight
-    col3(1.00f,1.00f,0.65f); drawRect(x+74,y+20,7,7);
-    // Tail light
-    col3(0.90f,0.10f,0.10f); drawRect(x,  y+20,5,7);
+    drawFilledCircle(0,0,14);
+    
+    // Rim (alloy)
+    col3(0.55f,0.55f,0.60f);
+    drawFilledCircle(0,0,9);
+    
+    // Hubcap (chrome)
+    col3(0.85f,0.85f,0.90f);
+    drawFilledCircle(0,0,5);
+    
+    // Hubcap center dot
+    col3(0.70f,0.70f,0.75f);
+    drawFilledCircle(0,0,2);
+    
+    glPopMatrix();
+    
+    // Rear wheel
+    glPushMatrix();
+    glTranslatef(22,-15,0);
+    
+    col3(0.12f,0.12f,0.12f);
+    drawFilledCircle(0,0,14);
+    
+    col3(0.55f,0.55f,0.60f);
+    drawFilledCircle(0,0,9);
+    
+    col3(0.85f,0.85f,0.90f);
+    drawFilledCircle(0,0,5);
+    
+    col3(0.70f,0.70f,0.75f);
+    drawFilledCircle(0,0,2);
+    
+    glPopMatrix();
+    
+    // === HEADLIGHTS ===
+    glPushMatrix();
+    glTranslatef(-32,4,0);
+    
+    col3(1.00f,1.00f,0.70f);
+    drawFilledCircle(0,0,5);
+    
+    col3(0.95f,0.90f,0.40f);
+    drawFilledCircle(0,0,3);
+    
+    glPopMatrix();
+    
+    // === TAIL LIGHTS ===
+    glPushMatrix();
+    glTranslatef(32,-2,0);
+    
+    col3(0.90f,0.15f,0.15f);
+    drawFilledCircle(0,0,4);
+    
+    col3(1.00f,0.40f,0.40f);
+    drawFilledCircle(0,0,2);
+    
+    glPopMatrix();
+    
+    // === GRILLE ===
+    col3(0.20f,0.20f,0.25f);
+    for(int i=0; i<4; i++){
+        glBegin(GL_LINES);
+        glVertex2f(-28,2+i*2); glVertex2f(-20,2+i*2);
+        glEnd();
+    }
+    
+    // === LICENSE PLATE ===
+    col3(0.95f,0.95f,0.95f);
+    glBegin(GL_QUADS);
+    glVertex2f(28,-8); glVertex2f(38,-8);
+    glVertex2f(38,-4); glVertex2f(28,-4);
+    glEnd();
+    
+    col3(0.15f,0.15f,0.15f);
+    drawText(30,-6,"ABC",GLUT_BITMAP_HELVETICA_12);
+    
+    glPopMatrix();
 }
+
 
 static void drawMotorcycle(float x,float y)
 {
-    // Frame
-    col3(0.18f,0.18f,0.22f); drawRect(x+8,y+14,38,20);
-    // Fuel tank
-    col3(0.60f,0.08f,0.08f); drawRect(x+15,y+30,22,14);
-    // Front fork
-    col3(0.30f,0.30f,0.35f); drawRect(x+38,y+10,5,25);
+    glPushMatrix();
+    glTranslatef(x+28.0f, y+20.0f, 0.0f);
+
+    // Ground shadow keeps the bike anchored to the road.
+    glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+    col4(0.0f,0.0f,0.0f,0.18f);
+    drawRect(-25.0f,-16.0f,54.0f,3.0f);
+    glDisable(GL_BLEND);
+
     // Wheels
-    col3(0.12f,0.12f,0.12f);
-    drawFilledCircle(x+12,y+11,12);
-    drawFilledCircle(x+46,y+11,12);
-    col3(0.40f,0.40f,0.40f);
-    drawFilledCircle(x+12,y+11,5);
-    drawFilledCircle(x+46,y+11,5);
-    // Rider body
-    col3(0.25f,0.25f,0.32f); drawRect(x+18,y+32,14,24);
-    // Head
-    col3(0.80f,0.62f,0.44f); drawFilledCircle(x+25,y+60,9);
-    // Helmet
-    col3(0.08f,0.08f,0.14f);
+    col3(0.10f,0.10f,0.12f);
+    drawFilledCircle(-16.0f,-8.0f,11.0f);
+    drawFilledCircle(18.0f,-8.0f,11.0f);
+    col3(0.50f,0.52f,0.56f);
+    drawFilledCircle(-16.0f,-8.0f,6.5f);
+    drawFilledCircle(18.0f,-8.0f,6.5f);
+    col3(0.76f,0.76f,0.80f);
+    drawFilledCircle(-16.0f,-8.0f,2.5f);
+    drawFilledCircle(18.0f,-8.0f,2.5f);
+
+    // Swingarm and chassis tubes
+    col3(0.20f,0.20f,0.24f);
+    glLineWidth(3.0f);
+    drawLine(-12.0f,-5.0f, 6.0f,-2.0f);
+    drawLine( 6.0f,-2.0f,18.0f,-5.0f);
+    drawLine(-12.0f,-5.0f,-2.0f, 8.0f);
+    drawLine(-2.0f, 8.0f,12.0f,10.0f);
+    drawLine(12.0f,10.0f,18.0f,-5.0f);
+    glLineWidth(1.0f);
+
+    // Engine block
+    col3(0.25f,0.25f,0.30f);
+    drawRect(-2.0f,-2.0f,10.0f,8.0f);
+    col3(0.35f,0.35f,0.40f);
+    drawRect(-1.0f,-1.0f,8.0f,3.0f);
+
+    // Exhaust
+    col3(0.42f,0.42f,0.46f);
+    drawRect(8.0f,-3.0f,16.0f,2.8f);
+    col3(0.58f,0.58f,0.62f);
+    drawRect(23.0f,-3.2f,3.0f,3.2f);
+
+    // Fuel tank and seat
+    col3(0.66f,0.12f,0.12f);
+    glBegin(GL_POLYGON);
+    glVertex2f(-1.0f,10.0f);
+    glVertex2f(10.5f,10.0f);
+    glVertex2f(12.5f,15.0f);
+    glVertex2f(2.0f,16.0f);
+    glVertex2f(-2.0f,13.0f);
+    glEnd();
+    col3(0.78f,0.24f,0.24f);
+    drawRect(1.0f,12.4f,8.0f,1.8f);
+
+    col3(0.12f,0.12f,0.14f);
+    glBegin(GL_POLYGON);
+    glVertex2f(-8.0f,11.0f);
+    glVertex2f(0.5f,11.0f);
+    glVertex2f(1.5f,13.6f);
+    glVertex2f(-7.2f,13.4f);
+    glEnd();
+
+    // Front fork and handlebar
+    col3(0.45f,0.45f,0.50f);
+    glLineWidth(2.5f);
+    drawLine(14.0f,12.0f,20.0f,-1.0f);
+    drawLine(15.5f,12.0f,21.5f,-1.0f);
+    glLineWidth(1.0f);
+    col3(0.28f,0.28f,0.32f);
+    drawRect(10.0f,15.0f,9.0f,1.8f);
+
+    // Headlight and beam
+    col3(1.0f,1.0f,0.70f);
+    drawFilledCircle(20.0f,12.0f,3.0f);
+    col3(0.95f,0.88f,0.40f);
+    drawFilledCircle(20.0f,12.0f,1.5f);
+    glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+    col4(1.0f,0.95f,0.70f,0.12f);
+    glBegin(GL_TRIANGLES);
+    glVertex2f(21.0f,12.0f);
+    glVertex2f(33.0f, 9.5f);
+    glVertex2f(33.0f,14.5f);
+    glEnd();
+    glDisable(GL_BLEND);
+
+    // Rider torso and head
+    col3(0.22f,0.24f,0.34f);
+    glBegin(GL_POLYGON);
+    glVertex2f(-2.0f,14.0f);
+    glVertex2f( 5.0f,14.0f);
+    glVertex2f( 7.0f,24.0f);
+    glVertex2f( 0.0f,24.0f);
+    glVertex2f(-3.0f,18.0f);
+    glEnd();
+    col3(0.80f,0.62f,0.44f);
+    drawFilledCircle(3.5f,27.0f,4.3f);
+
+    // Helmet and visor
+    col3(0.08f,0.08f,0.12f);
     glBegin(GL_TRIANGLE_FAN);
-    glVertex2f(x+25,y+63);
+    glVertex2f(3.5f,28.0f);
     for(int i=0;i<=18;i++){
         float a=PI+PI*i/18.0f;
-        glVertex2f(x+25+11*cosf(a), y+63+10*sinf(a));
+        glVertex2f(3.5f+5.2f*cosf(a), 28.0f+4.8f*sinf(a));
     }
     glEnd();
-    // Visor
-    col3(0.15f,0.55f,0.75f); drawRect(x+17,y+57,16,6);
+    col3(0.18f,0.58f,0.80f);
+    drawRect(-1.0f,26.0f,7.0f,2.5f);
+
+    // Arms to handlebar
+    col3(0.76f,0.56f,0.36f);
+    glLineWidth(3.0f);
+    drawLine(1.0f,20.0f, 9.5f,16.0f);
+    drawLine(5.0f,20.0f,13.0f,15.8f);
+    glLineWidth(1.0f);
+
+    // Rear light
+    col3(0.90f,0.14f,0.14f);
+    drawRect(-10.2f,10.8f,2.2f,1.8f);
+
+    glPopMatrix();
 }
 
 static void drawVehicles()
@@ -1051,19 +1306,14 @@ static void drawVehicles()
 
 static void drawHUD()
 {
-
-    // Controls hint
-    col3(0.55f,0.55f,0.60f);
-    drawText(12,8,"[S] Spawn Drone   [ESC] Quit",GLUT_BITMAP_HELVETICA_12);
-
-    // Paused overlay
+    // Display pause overlay only
     if(gPaused){
         glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-        col4(0,0,0,0.5f); drawRect(0,0,WIN_W,WIN_H);
+        col4(0,0,0,0.6f); drawRect(0,0,WIN_W,WIN_H);
         glDisable(GL_BLEND);
         col3(1.0f,1.0f,0.0f);
         drawText(530,370,"-- PAUSED --");
-        drawText(490,340,"Press P to resume",GLUT_BITMAP_HELVETICA_12);
+        drawText(460,320,"[P] Resume | [ESC] Quit",GLUT_BITMAP_HELVETICA_12);
     }
 }
 
@@ -1241,7 +1491,6 @@ static void update(int)
                 addExplosion(tx,ty);
                 gDrones[ti].active=false;
                 m.active=false;
-                gScore+=10;  // Award points
             } else {
                 // Move missile toward target
                 m.x+=(tx-m.x)/d*m.speed;
@@ -1302,7 +1551,7 @@ static void display()
     // Draw particles (sparks, smoke, debris)
     drawParticles();
     
-    // Draw HUD overlay (score, instructions, etc.)
+    // Draw HUD overlay (pause status, system info, etc.)
     drawHUD();
 
     glutSwapBuffers();  // Double-buffer display
@@ -1326,7 +1575,7 @@ static void keyboard(unsigned char key,int,int)
 {
     switch(key){
         case 27:  exit(0); break;                    // ESC → Quit program
-        case 's': case 'S': spawnDrone(); break;     // S → Manual drone spawn
+        case 's': case 'S': spawnDrone(); break;     // S → Trigger manual drone spawn (bypasses auto-spawn interval)
         case 'p': case 'P': gPaused=!gPaused; break; // P → Toggle pause
     }
 }
@@ -1365,7 +1614,3 @@ int main(int argc,char** argv)
     glutMainLoop();
     return 0;
 }
-
-
-
-
