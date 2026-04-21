@@ -4,7 +4,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
-
 #define PI              3.14159265358979323846f
 #define WIN_W           1200
 #define WIN_H           700
@@ -13,8 +12,8 @@
 #define MAX_EXPLOSIONS  10
 #define MAX_PARTICLES   80
 
-// ─── Data Structures ─────────────────────────────────────────
-// Enemy drone that flies across the screen from right to left
+// // ─── Data Structures ─────────────────────────────────────────
+// // Enemy drone that flies across the screen from right to left
 struct Drone {
     float x, y;              // Position in world space
     float speed;             // Horizontal movement speed (pixels per frame)
@@ -61,16 +60,16 @@ struct Cloud {
     bool  active;         // Is cloud visible
 };
 
-// ─── Globals ─────────────────────────────────────────────────
+// // ─── Globals ─────────────────────────────────────────────────
 
-// Radar subsystem
+// // Radar subsystem
 float gRadarAngle   = 0.0f;
 const float RADAR_X = 100.0f;                      // Radar center X position (top-left)
 const float RADAR_Y = 580.0f;                      // Radar center Y position (top-left)
 const float RADAR_R = 88.0f;                       // Radar display radius on screen
 const float RADAR_DETECT_RANGE = 420.0f;           // World-space detection radius
 
-// Game entity arrays (pool allocation for efficiency)
+// // Game entity arrays (pool allocation for efficiency)
 Drone      gDrones    [MAX_DRONES];                // Enemy drones
 Missile    gMissiles  [MAX_MISSILES];              // Guided missiles
 Explosion  gExplosions[MAX_EXPLOSIONS];            // Explosion effects
@@ -89,65 +88,73 @@ int  gFrameCounter   = 0;                          // Master frame counter for a
 float gStarX[200], gStarY[200];                    // Random star positions
 float gStreetLights[20][2];                        // Street light coordinates
 
-
 // ─── Helpers ─────────────────────────────────────────────────
 // Calculate Euclidean distance between two points
-static inline float fDist(float x1, float y1, float x2, float y2) {
-    float dx = x2 - x1, dy = y2 - y1;
-    return sqrtf(dx * dx + dy * dy);
+static inline float fDist(float x1,float y1,float x2,float y2) {
+    float dx=x2-x1, dy=y2-y1;
+    return sqrtf(dx*dx+dy*dy);
 }
 
 // Set 3-component RGB color
-static void col3(float r, float g, float b) { glColor3f(r, g, b); }
-
+static void col3(float r,float g,float b){ glColor3f(r,g,b); }
 // Set 4-component RGBA color with alpha (transparency)
-static void col4(float r, float g, float b, float a) { glColor4f(r, g, b, a); }
+static void col4(float r,float g,float b,float a){ glColor4f(r,g,b,a); }
 
-static void drawFilledCircle(float cx, float cy, float r, int seg = 60) {
+// ─── Primitive Drawing ───────────────────────────────────────
+// Renders a filled circle using triangle fan (fast and smooth)
+static void drawFilledCircle(float cx,float cy,float r,int seg=60)
+{
     glBegin(GL_TRIANGLE_FAN);
-    glVertex2f(cx, cy);
-    for (int i = 0; i <= seg; i++) {
-        float a = 2.0f * PI * i / seg;
-        glVertex2f(cx + r * cosf(a), cy + r * sinf(a));
+    glVertex2f(cx,cy);
+    // Generate vertices around circle perimeter
+    for(int i=0;i<=seg;i++){
+        float a=2.0f*PI*i/seg;
+        glVertex2f(cx+r*cosf(a),cy+r*sinf(a));
     }
     glEnd();
 }
 
-static void drawCircleOutline(float cx, float cy, float r, int seg = 60) {
+// Renders a circle outline (wireframe)
+static void drawCircleOutline(float cx,float cy,float r,int seg=60)
+{
     glBegin(GL_LINE_LOOP);
-    for (int i = 0; i < seg; i++) {
-        float a = 2.0f * PI * i / seg;
-        glVertex2f(cx + r * cosf(a), cy + r * sinf(a));
+    for(int i=0;i<seg;i++){
+        float a=2.0f*PI*i/seg;
+        glVertex2f(cx+r*cosf(a),cy+r*sinf(a));
     }
     glEnd();
 }
 
-static void drawLine(float x1, float y1, float x2, float y2) {
+static void drawLine(float x1,float y1,float x2,float y2){
     glBegin(GL_LINES);
-    glVertex2f(x1, y1);
-    glVertex2f(x2, y2);
+    glVertex2f(x1,y1); glVertex2f(x2,y2);
     glEnd();
 }
 
-static void drawRect(float x, float y, float w, float h) {
+// Draw a rectangle (axis-aligned quad)
+static void drawRect(float x,float y,float w,float h){
     glBegin(GL_QUADS);
-    glVertex2f(x, y);
-    glVertex2f(x + w, y);
-    glVertex2f(x + w, y + h);
-    glVertex2f(x, y + h);
+    glVertex2f(x,  y);   glVertex2f(x+w,y);
+    glVertex2f(x+w,y+h); glVertex2f(x,  y+h);
     glEnd();
 }
 
-static void drawText(float x, float y, const char* s, void* font = GLUT_BITMAP_HELVETICA_18) {
-    glRasterPos2f(x, y);
-    for (; *s; s++) glutBitmapCharacter(font, *s);
+// Render text at screen position using bitmap font
+static void drawText(float x,float y,const char* s,void* font=GLUT_BITMAP_HELVETICA_18){
+    glRasterPos2f(x,y);
+    for(;*s;s++) glutBitmapCharacter(font,*s);
 }
+
+// ─── Background ──────────────────────────────────────────────
+// Draw a single fluffy cloud made of overlapping circles (improved pattern)
 static void drawCloud(float cx, float cy, float scale)
 {
     glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    col4(200.0f/255.0f, 232.0f/255.0f, 245.0f/255.0f, 0.65f);
+    col4(200.0f/255.0f, 232.0f/255.0f, 245.0f/255.0f, 0.65f);  // Light blue cloud color
     
-    float radius = 18.0f * scale; 
+    // Improved cloud shape using overlapping circles
+    // Base coordinates normalized then scaled for screen position
+    float radius = 18.0f * scale;  // Cloud puff radius
     
     drawFilledCircle(cx + 0*radius, cy + 0.08f*radius, 0.07f*radius, 20);
     drawFilledCircle(cx - 0.06f*radius, cy + 0.08f*radius, 0.07f*radius, 20);
@@ -162,49 +169,57 @@ static void drawCloud(float cx, float cy, float scale)
     glDisable(GL_BLEND);
 }
 
-static void drawClouds() {
-    for (int i = 0; i < 20; i++) {
-        if (gClouds[i].active) {
+// Render all active clouds in the scene
+static void drawClouds()
+{
+    for(int i = 0; i < 20; i++){
+        if(gClouds[i].active){
             drawCloud(gClouds[i].x, gClouds[i].y, gClouds[i].scale);
         }
     }
 }
 
-static void updateClouds() {
-    for (int i = 0; i < 20; i++) {
-        if (gClouds[i].active) {
+// Update cloud positions each frame (parallax scrolling effect)
+static void updateClouds()
+{
+    for(int i = 0; i < 20; i++){
+        if(gClouds[i].active){
             gClouds[i].x += gClouds[i].speed;
-            if (gClouds[i].x > WIN_W + 150) gClouds[i].x = -150;
+            // Wrap around: when cloud exits right screen, reappear on left
+            if(gClouds[i].x > WIN_W + 150) gClouds[i].x = -150;
         }
     }
 }
 
-static void drawWindow(float x,float y,float w,float h,bool lit)
+// Draw all 20 street lights along the road with glow effects
+static void drawStreetLights()
 {
-    if(lit){ col3(0.95f,0.85f,0.40f); }
-    else   { col3(0.04f,0.07f,0.18f); }
-    drawRect(x,y,w,h);
+    col3(0.15f, 0.15f, 0.18f);
+    for(int i = 0; i < 20; i++){
+        float sx = gStreetLights[i][0];
+        float sy = gStreetLights[i][1];
+        
+        // Light pole structure
+        drawRect(sx - 2, sy, 4, 32);
+        
+        // Light fixture head
+        col3(0.30f, 0.30f, 0.35f);
+        drawFilledCircle(sx, sy + 32, 8);
+        
+        // Glow effect (multiple transparent halos around bulb)
+        glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        col4(1.00f, 0.95f, 0.70f, 0.15f);  // Warm yellow glow
+        drawFilledCircle(sx, sy + 32, 16);
+        col4(1.00f, 0.95f, 0.70f, 0.08f);  // Outer dim halo
+        drawFilledCircle(sx, sy + 32, 24);
+        glDisable(GL_BLEND);
+        
+        // Light bulb
+        col3(0.15f, 0.15f, 0.18f);
+    }
 }
 
-static void drawBuilding(float x,float baseY,float w,float h,float dr,float dg,float db)
-{
-    col3(dr,dg,db); drawRect(x,baseY,w,h);
-    // Windows grid
-    int seed=(int)(x*31+h*7);
-    for(float wy=baseY+8; wy<baseY+h-8; wy+=20){
-        for(float wx=x+5; wx<x+w-10; wx+=16){
-            bool lit=(((int)(wx+wy+seed))%3!=0);
-            drawWindow(wx,wy,9,12,lit);
-        }
-    }
-    // Antenna on tall buildings
-    if(h>160){
-        col3(dr,dg,db);
-        drawRect(x+w/2-2,baseY+h,4,20);
-        col3(1.0f,0.2f,0.2f);
-        drawFilledCircle(x+w/2,baseY+h+22,4);
-    }
-}
+// ─── Background ──────────────────────────────────────────────
 
 static void drawBackground()
 {
@@ -284,7 +299,35 @@ static void drawBackground()
     drawStreetLights();
 }
 
-// ========== CITY SKYLINE ==========
+// ─── City Skyline ────────────────────────────────────────────
+
+static void drawWindow(float x,float y,float w,float h,bool lit)
+{
+    if(lit){ col3(0.95f,0.85f,0.40f); }
+    else   { col3(0.04f,0.07f,0.18f); }
+    drawRect(x,y,w,h);
+}
+
+static void drawBuilding(float x,float baseY,float w,float h,float dr,float dg,float db)
+{
+    col3(dr,dg,db); drawRect(x,baseY,w,h);
+    // Windows grid
+    int seed=(int)(x*31+h*7);
+    for(float wy=baseY+8; wy<baseY+h-8; wy+=20){
+        for(float wx=x+5; wx<x+w-10; wx+=16){
+            bool lit=(((int)(wx+wy+seed))%3!=0);
+            drawWindow(wx,wy,9,12,lit);
+        }
+    }
+    // Antenna on tall buildings
+    if(h>160){
+        col3(dr,dg,db);
+        drawRect(x+w/2-2,baseY+h,4,20);
+        col3(1.0f,0.2f,0.2f);
+        drawFilledCircle(x+w/2,baseY+h+22,4);
+    }
+}
+
 static void drawCitySkyline()
 {
     // Building layout: {x, w, h, r, g, b}
@@ -312,7 +355,317 @@ static void drawCitySkyline()
     for(auto& b:B) drawBuilding(b[0],230.0f,b[1],b[2],b[3],b[4],b[5]);
 }
 
-// ========== RADAR ==========
+// ─── Defense Vehicle ─────────────────────────────────────────
+
+static void drawDefenseVehicle()
+{
+    const float BX=65.0f, BY=200.0f;
+
+    // === TRACKS - Improved with track segments ===
+    // Track guide rail/torsion bar
+    col3(0.12f,0.12f,0.12f); drawRect(BX-12,BY,220,5);
+    col3(0.12f,0.12f,0.12f); drawRect(BX-12,BY+35,220,5);
+    
+    // Track segments (cleats)
+    col3(0.16f,0.16f,0.16f);
+    for(int i=0;i<9;i++){
+        drawRect(BX+2+i*21.0f,BY+8,18,3);
+        drawRect(BX+2+i*21.0f,BY+28,18,3);
+    }
+    
+    // Road wheels (main suspension wheels)
+    for(int i=0;i<8;i++){
+        col3(0.22f,0.22f,0.22f); drawFilledCircle(BX+5+i*25.0f,BY+15,13);
+        col3(0.10f,0.10f,0.10f); drawFilledCircle(BX+5+i*25.0f,BY+15, 8);
+        col3(0.18f,0.18f,0.18f); drawFilledCircle(BX+5+i*25.0f,BY+15, 4);
+    }
+    
+    // Support rollers (small upper wheels)
+    col3(0.20f,0.20f,0.20f);
+    for(int i=1;i<7;i++) drawFilledCircle(BX+5+i*25.0f,BY-3,6);
+    
+    // Drive sprocket (front wheel)
+    col3(0.25f,0.25f,0.25f); drawFilledCircle(BX+200,BY+15,16);
+    col3(0.12f,0.12f,0.12f); drawFilledCircle(BX+200,BY+15,10);
+    
+    // Idler wheel (rear)
+    col3(0.24f,0.24f,0.24f); drawFilledCircle(BX-5,BY+15,15);
+    col3(0.11f,0.11f,0.11f); drawFilledCircle(BX-5,BY+15,9);
+
+    // === Lower Hull - Armored base ===
+    // Hull bottom (sloped sides for armor)
+    col3(0.16f,0.28f,0.10f); drawRect(BX-2,BY+26,200,12);
+    
+    // Main hull sides (thicker armor)
+    col3(0.18f,0.31f,0.11f); drawRect(BX-5,BY+38,205,32);
+    
+    // Side panel details
+    col3(0.22f,0.36f,0.14f);
+    drawRect(BX+5,BY+40,185,8);
+    drawRect(BX+5,BY+58,185,8);
+    
+    // Hull vents/louvers
+    col3(0.12f,0.20f,0.08f);
+    for(int i=0;i<6;i++){
+        drawRect(BX+15+i*28.0f,BY+32,6,4);
+        drawRect(BX+15+i*28.0f,BY+62,6,4);
+    }
+
+    // === Upper Turret Hull ===
+    col3(0.20f,0.35f,0.14f); drawRect(BX+15,BY+70,165,42);
+    
+    // Turret front slope (glacis)
+    glBegin(GL_QUADS);
+    col3(0.19f,0.33f,0.13f);
+    glVertex2f(BX+15,BY+70); glVertex2f(BX+32,BY+112);
+    glVertex2f(BX+80,BY+112); glVertex2f(BX+80,BY+70);
+    glEnd();
+    
+    // Turret top with slight curve appearance
+    col3(0.22f,0.37f,0.15f);
+    drawRect(BX+20,BY+108,155,8);
+    
+    // Commander hatch
+    col3(0.14f,0.24f,0.10f);
+    drawRect(BX+130,BY+110,12,10);
+    col3(0.25f,0.40f,0.18f);
+    drawRect(BX+131,BY+111,10,8);
+    
+    // Periscope mount
+    col3(0.18f,0.30f,0.12f); drawRect(BX+155,BY+108,6,8);
+    col3(0.10f,0.16f,0.06f); drawFilledCircle(BX+158,BY+114,2);
+    
+    // Rivets along hull (realistic fasteners)
+    col3(0.28f,0.42f,0.18f);
+    for(int i=0;i<6;i++){
+        drawFilledCircle(BX+30+i*28.0f,BY+75,2);
+        drawFilledCircle(BX+30+i*28.0f,BY+105,2);
+    }
+
+    // === RADAR SYSTEM - Enhanced ===
+    // Mast support structure
+    col3(0.24f,0.40f,0.16f); drawRect(BX+22,BY+106,8,38);
+    col3(0.18f,0.30f,0.12f);
+    drawRect(BX+20,BY+140,12,2);
+    drawRect(BX+20,BY+144,12,2);
+    
+    // Mast reinforcement bands
+    col3(0.20f,0.34f,0.14f);
+    for(int i=0;i<4;i++) drawRect(BX+20,BY+112+i*8.0f,12,1);
+    
+    // Dish mounting bracket
+
+    
+    // Dish bowl (parabolic reflector)
+    // === RADAR DISH (Enhanced Parabolic Reflector - Rotating Semicircle) ===
+    // Calculate rotation angle based on frame counter
+    float dishRotation = gFrameCounter * 2.2f;  // Continuous rotation
+    
+    glPushMatrix();
+    glTranslatef(BX+25, BY+150, 0);
+    glRotatef(dishRotation, 0, 0, 1);  // Rotate around center
+    glTranslatef(-(BX+25), -(BY+150), 0);
+    
+    // Outer dish rim shadow (3D depth effect)
+    col3(0.35f,0.42f,0.24f);
+    glBegin(GL_TRIANGLE_STRIP);
+    for(int i=0;i<=32;i++){
+        float a=PI+PI*i/32.0f;  // Only semicircle (PI to 2*PI)
+        glVertex2f(BX+25+34.0f*cosf(a), BY+150+22.0f*sinf(a));
+        glVertex2f(BX+25+35.5f*cosf(a), BY+150+23.5f*sinf(a));
+    }
+    glEnd();
+    
+    // Main dish reflector surface (parabolic semicircle base)
+    col3(0.52f,0.64f,0.36f);
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2f(BX+25,BY+150);
+    for(int i=0;i<=24;i++){
+        float a=PI+PI*i/24.0f;  // Only semicircle
+        glVertex2f(BX+25+34.0f*cosf(a), BY+150+22.0f*sinf(a));
+    }
+    glEnd();
+    
+    // Dish reflector segments (metallic panels) - 12 segments for semicircle
+    col3(0.58f,0.70f,0.40f);
+    for(int i=0;i<12;i++){
+        float a1=PI+PI*i/12.0f;
+        float a2=PI+PI*(i+1)/12.0f;
+        glBegin(GL_TRIANGLES);
+        glVertex2f(BX+25,BY+150);
+        glVertex2f(BX+25+34*cosf(a1), BY+150+22*sinf(a1));
+        glVertex2f(BX+25+34*cosf(a2), BY+150+22*sinf(a2));
+        glEnd();
+        
+        // Panel edge highlight (metallic reflection)
+        col3(0.68f,0.78f,0.52f);
+        glLineWidth(1.5f);
+        glBegin(GL_LINES);
+        glVertex2f(BX+25,BY+150);
+        glVertex2f(BX+25+34*cosf(a1), BY+150+22*sinf(a1));
+        glEnd();
+        glLineWidth(1.0f);
+        col3(0.58f,0.70f,0.40f);
+    }
+    
+    // Inner concentric rings for reflector detail (semicircle only)
+    glLineWidth(1.0f);
+    col3(0.50f,0.60f,0.32f);
+    for(int ring=1;ring<=2;ring++){
+        float rRatio = 0.7f * ring / 2.0f;
+        glBegin(GL_LINE_STRIP);
+        for(int i=0;i<=32;i++){
+            float a=PI+PI*i/32.0f;
+            glVertex2f(BX+25+34.0f*rRatio*cosf(a), BY+150+22.0f*rRatio*sinf(a));
+        }
+        glEnd();
+    }
+    
+    // Dish rim structure (circular frame with beveled edge - semicircle)
+    col3(0.65f,0.75f,0.48f);
+    glLineWidth(3.5f);
+    glBegin(GL_LINE_STRIP);
+    for(int i=0;i<=32;i++){
+        float a=PI+PI*i/32.0f;
+        glVertex2f(BX+25+34.0f*cosf(a), BY+150+22.0f*sinf(a));
+    }
+    glEnd();
+    
+    // Connect the two ends of semicircle with straight lines
+    glLineWidth(3.5f);
+    glBegin(GL_LINES);
+    glVertex2f(BX+25+34.0f*cosf(PI), BY+150+22.0f*sinf(PI));
+    glVertex2f(BX+25, BY+150);
+    glVertex2f(BX+25+34.0f*cosf(2*PI), BY+150+22.0f*sinf(2*PI));
+    glVertex2f(BX+25, BY+150);
+    glEnd();
+    glLineWidth(1.0f);
+    
+    // Rim inner edge highlight (semicircle)
+    col3(0.72f,0.82f,0.55f);
+    glLineWidth(2.0f);
+    glBegin(GL_LINE_STRIP);
+    for(int i=0;i<=32;i++){
+        float a=PI+PI*i/32.0f;
+        glVertex2f(BX+25+33.0f*cosf(a), BY+150+21.0f*sinf(a));
+    }
+    glEnd();
+    glLineWidth(1.0f);
+    
+    glPopMatrix();  // End rotation
+    
+    // Dish feed horn (center receiver) - Enhanced
+    col3(0.25f, 0.35f, 0.15f);
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2f(BX+25,BY+150-8);
+    for(int i=0;i<=16;i++){
+        float a=2.0f*PI*i/16.0f;
+        glVertex2f(BX+25+8.0f*cosf(a), BY+150+8.0f*sinf(a)-8);
+    }
+    glEnd();
+    
+    // Feed horn outer ring
+    col3(0.35f, 0.50f, 0.25f);
+    glLineWidth(2.0f);
+    glBegin(GL_LINE_LOOP);
+    for(int i=0;i<=16;i++){
+        float a=2.0f*PI*i/16.0f;
+        glVertex2f(BX+25+8.0f*cosf(a), BY+150+8.0f*sinf(a)-8);
+    }
+    glEnd();
+    
+    // Feed horn waveguide
+    col3(0.58f,0.68f,0.40f);
+    drawRect(BX+22,BY+142,6,8);
+    
+    // Feed horn entrance window (receiver)
+    col3(0.68f, 0.78f, 0.52f);
+    drawFilledCircle(BX+25,BY+150-6,4);
+    col3(0.58f, 0.70f, 0.42f);
+    drawFilledCircle(BX+25,BY+150-6,2);
+    glLineWidth(1.0f);
+
+    // === MISSILE LAUNCHER SYSTEM (3 tubes) ===
+    // Launcher frame/cradle
+    col3(0.20f,0.34f,0.14f);
+    drawRect(BX+95,BY+80,48,35);
+    
+    for(int t=0;t<3;t++){
+        glPushMatrix();
+        glTranslatef(BX+119,BY+95,0);
+        glRotatef(50.0f+t*10.0f,0,0,1);
+
+        // Tube exterior (gun barrel)
+        col3(0.22f,0.36f,0.16f); drawRect(0,-6,90,12);
+        
+        // Tube ribbing (thermal dissipation fins)
+        col3(0.18f,0.30f,0.13f);
+        for(int r=0;r<8;r++) drawRect(10+r*8.0f,-6.5f,1.5f,13);
+        
+        // Tube muzzle (end cap)
+        col3(0.16f,0.27f,0.11f); drawRect(87,-7,5,14);
+        col3(0.20f,0.33f,0.14f); drawRect(88,-6,3,12);
+        
+        // Muzzle brake
+        col3(0.24f,0.38f,0.17f);
+        glBegin(GL_TRIANGLES);
+        glVertex2f(93,-8); glVertex2f(100,-10); glVertex2f(100,-6);
+        glEnd();
+        glBegin(GL_TRIANGLES);
+        glVertex2f(93,8); glVertex2f(100,10); glVertex2f(100,6);
+        glEnd();
+
+        // Missile shell in tube
+        col3(0.68f,0.68f,0.72f); drawRect(45,-5,38,10);
+        
+        // Missile warhead (pointed nose)
+        col3(0.82f,0.12f,0.08f);
+        glBegin(GL_TRIANGLES);
+        glVertex2f(83,0); glVertex2f(72,-5); glVertex2f(72,5);
+        glEnd();
+        
+        // Missile body bands (segmentation)
+        col3(0.88f,0.85f,0.20f);
+        drawRect(60,-5,4,10);
+        drawRect(50,-5,4,10);
+        
+        // Tail fin assembly
+        col3(0.48f,0.50f,0.56f);
+        glBegin(GL_POLYGON);
+        glVertex2f(45,0); glVertex2f(40,-6); glVertex2f(48,-10); glVertex2f(50,-8);
+        glEnd();
+        glBegin(GL_POLYGON);
+        glVertex2f(45,0); glVertex2f(40,6); glVertex2f(48,10); glVertex2f(50,8);
+        glEnd();
+
+        glPopMatrix();
+    }    col3(0.22f,0.36f,0.16f);
+    glBegin(GL_QUADS);
+    glVertex2f(BX+22,BY+144); glVertex2f(BX+28,BY+144);
+    glVertex2f(BX+30,BY+148); glVertex2f(BX+20,BY+148);
+    glEnd();
+    
+    // Launcher elevation mechanism
+    col3(0.16f,0.26f,0.10f);
+    drawRect(BX+90,BY+75,2,35);
+    drawRect(BX+145,BY+75,2,35);
+
+    // === VEHICLE DETAILS ===
+    // Headlights/searchlight
+    col3(0.28f,0.44f,0.20f); drawRect(BX+175,BY+50,8,8);
+    col3(0.60f,0.75f,0.90f); drawFilledCircle(BX+179,BY+54,3);
+    
+    // Antenna (small)
+    col3(0.20f,0.34f,0.14f); drawRect(BX+50,BY+114,2,12);
+    col3(0.25f,0.40f,0.18f); drawFilledCircle(BX+51,BY+128,2);
+
+    // Vehicle identification marking
+    col3(0.88f,0.88f,0.22f);
+    drawText(BX+110,BY+32,"ZAM-7",GLUT_BITMAP_HELVETICA_12);
+}
+
+// ─── Radar Display ───────────────────────────────────────────
+
 static void drawRadar()
 {
     float cx=RADAR_X, cy=RADAR_Y, r=RADAR_R;
@@ -392,6 +745,8 @@ static void drawRadar()
     glDisable(GL_BLEND);
 }
 
+// ─── Drone ───────────────────────────────────────────────────
+// Draw an enemy drone with animation effects
 static void drawDrone(float x,float y,bool detected)
 {
     // Calculate banking (tilting) angle based on frame counter for smooth flight animation
@@ -452,31 +807,8 @@ static void drawDrone(float x,float y,bool detected)
     glPopMatrix();
 }
 
-static void spawnParticles(float x,float y)
-{
-    for(int i=0;i<MAX_PARTICLES;i++){
-        if(!gParticles[i].active){
-            float a=(float)(rand()%360)*PI/180.0f;
-            float spd=1.5f+(rand()%40)/10.0f;
-            int ptype = rand()%3; // 0=spark, 1=smoke, 2=debris
-            float r = 1.0f, g = (rand()%10)/10.0f, b = 0.0f;
-            
-            // Customize particle properties based on type
-            if(ptype == 1){ // smoke: gray, slow, drifts upward
-                r = 0.8f; g = 0.8f; b = 0.8f;
-                spd *= 0.6f;
-            } else if(ptype == 2){ // debris: brown, fast ballistic
-                r = 0.7f; g = 0.5f; b = 0.3f;
-                spd *= 1.4f;
-            }
-            // else: spark remains bright yellow/orange, medium speed
-            
-            gParticles[i]={x,y,cosf(a)*spd,sinf(a)*spd,1.0f,r,g,b,ptype,true};
-            static int cnt=0; if(++cnt>=12){ cnt=0; return; }  // Limit 12 particles per burst
-        }
-    }
-}
-// ========== MISSILE ==========
+// ─── Missile ─────────────────────────────────────────────────
+// Draw a guided missile with smoke trail effects
 static void drawMissileProj(float x,float y,float tx,float ty)
 {
     // Calculate rotation angle to point toward target
@@ -538,25 +870,49 @@ static void drawMissileProj(float x,float y,float tx,float ty)
     glPopMatrix();
 }
 
+// ─── Explosion ───────────────────────────────────────────────
 
-static void drawExplosion(const Explosion& e) {
-    float t = e.radius / e.maxRadius;
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+static void drawExplosion(const Explosion& e)
+{
+    float t=e.radius/e.maxRadius; // 0..1
+    glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 
-    col4(1.0f, 0.20f, 0.00f, 1.0f - t * 0.6f);
-    drawFilledCircle(e.x, e.y, e.radius);
-    col4(1.0f, 0.60f, 0.00f, 1.0f - t * 0.7f);
-    drawFilledCircle(e.x, e.y, e.radius * 0.68f);
-    col4(1.0f, 0.95f, 0.40f, 1.0f - t * 0.8f);
-    drawFilledCircle(e.x, e.y, e.radius * 0.40f);
-    col4(1.0f, 1.00f, 1.00f, 1.0f - t * 0.9f);
-    drawFilledCircle(e.x, e.y, e.radius * 0.18f);
+    col4(1.0f,0.20f,0.00f,1.0f-t*0.6f); drawFilledCircle(e.x,e.y,e.radius);
+    col4(1.0f,0.60f,0.00f,1.0f-t*0.7f); drawFilledCircle(e.x,e.y,e.radius*0.68f);
+    col4(1.0f,0.95f,0.40f,1.0f-t*0.8f); drawFilledCircle(e.x,e.y,e.radius*0.40f);
+    col4(1.0f,1.00f,1.00f,1.0f-t*0.9f); drawFilledCircle(e.x,e.y,e.radius*0.18f);
 
     glDisable(GL_BLEND);
 }
 
-// ========== PARTICLES ==========
+// ─── Particles ───────────────────────────────────────────────
+// Spawn particles (sparks, smoke, debris) at explosion location
+static void spawnParticles(float x,float y)
+{
+    for(int i=0;i<MAX_PARTICLES;i++){
+        if(!gParticles[i].active){
+            float a=(float)(rand()%360)*PI/180.0f;
+            float spd=1.5f+(rand()%40)/10.0f;
+            int ptype = rand()%3; // 0=spark, 1=smoke, 2=debris
+            float r = 1.0f, g = (rand()%10)/10.0f, b = 0.0f;
+            
+            // Customize particle properties based on type
+            if(ptype == 1){ // smoke: gray, slow, drifts upward
+                r = 0.8f; g = 0.8f; b = 0.8f;
+                spd *= 0.6f;
+            } else if(ptype == 2){ // debris: brown, fast ballistic
+                r = 0.7f; g = 0.5f; b = 0.3f;
+                spd *= 1.4f;
+            }
+            // else: spark remains bright yellow/orange, medium speed
+            
+            gParticles[i]={x,y,cosf(a)*spd,sinf(a)*spd,1.0f,r,g,b,ptype,true};
+            static int cnt=0; if(++cnt>=12){ cnt=0; return; }  // Limit 12 particles per burst
+        }
+    }
+}
+
+// Render all active particles with appropriate visuals
 static void drawParticles()
 {
     glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
@@ -595,6 +951,7 @@ static void drawParticles()
     glDisable(GL_BLEND);
 }
 
+// Update particle physics each frame
 static void updateParticles()
 {
     for(auto& p:gParticles){
@@ -612,6 +969,8 @@ static void updateParticles()
         if(p.life<=0) p.active=false;
     }
 }
+
+// ─── Vehicles ────────────────────────────────────────────────
 
 static void drawCar(float x,float y,float r,float g,float b)
 {
@@ -679,7 +1038,111 @@ static void drawMotorcycle(float x,float y)
     // Visor
     col3(0.15f,0.55f,0.75f); drawRect(x+17,y+57,16,6);
 }
-static void spawnDrone()//swapdron
+
+static void drawVehicles()
+{
+    for(auto& v:gVehicles){
+        if(v.type==0) drawCar(v.x,v.y,v.r,v.g,v.b);
+        else          drawMotorcycle(v.x,v.y);
+    }
+}
+
+// ─── HUD ─────────────────────────────────────────────────────
+
+static void drawHUD()
+{
+
+    // Controls hint
+    col3(0.55f,0.55f,0.60f);
+    drawText(12,8,"[S] Spawn Drone   [ESC] Quit",GLUT_BITMAP_HELVETICA_12);
+
+    // Paused overlay
+    if(gPaused){
+        glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+        col4(0,0,0,0.5f); drawRect(0,0,WIN_W,WIN_H);
+        glDisable(GL_BLEND);
+        col3(1.0f,1.0f,0.0f);
+        drawText(530,370,"-- PAUSED --");
+        drawText(490,340,"Press P to resume",GLUT_BITMAP_HELVETICA_12);
+    }
+}
+
+// ─── Spawn / Init ────────────────────────────────────────────
+// Initialize all game systems and data structures
+static void initAll()
+{
+    srand((unsigned)time(nullptr));  // Seed random number generator
+
+    // Generate random star positions in sky
+    for(int i=0;i<200;i++){
+        gStarX[i]=(float)(rand()%WIN_W);
+        gStarY[i]=230+(float)(rand()%(WIN_H-230));  // Only in sky area
+    }
+
+    // Initialize street light positions (two rows along road)
+    float slData[20][2] = {
+        {60,138}, {180,138}, {300,138}, {420,138}, {540,138},
+        {660,138}, {780,138}, {900,138}, {1020,138}, {1140,138},
+        {120,108}, {240,108}, {360,108}, {480,108}, {600,108},
+        {720,108}, {840,108}, {960,108}, {1080,108}, {1200,108}
+    };
+    for(int i=0; i<20; i++){
+        gStreetLights[i][0] = slData[i][0];
+        gStreetLights[i][1] = slData[i][1];
+    }
+
+    // Deactivate all game entities initially
+    for(auto& d:gDrones)    { d.active=false; d.detected=false; d.missileAssigned=-1; }
+    for(auto& m:gMissiles)  { m.active=false; }
+    for(auto& e:gExplosions){ e.active=false; }
+    for(auto& p:gParticles) { p.active=false; }
+    
+    // Initialize cloud layer with parallax speeds (faster = closer to camera) and VERY LARGE sizes (4x bigger)
+    float cloudData[][4] = {
+        // Far layer (small, slow) - 4x scale
+        {50,600,0.08f,1.2f},    // x, y, speed, scale
+        {280,610,0.06f,1.4f},
+        {520,590,0.07f,1.2f},
+        {750,605,0.075f,1.28f},
+        {950,615,0.065f,1.12f},
+        {1100,600,0.07f,1.2f},
+        // Middle layer (medium, moderate speed) - 4x scale
+        {100,520,0.15f,2.8f},
+        {350,550,0.12f,3.2f},
+        {600,510,0.14f,3.0f},
+        {880,535,0.13f,3.12f},
+        {1150,520,0.16f,2.88f},
+        // Close layer (large, fast) - 4x scale
+        {150,450,0.35f,5.6f},
+        {400,480,0.32f,6.0f},
+        {750,430,0.38f,6.4f},
+        {1000,470,0.34f,5.8f},
+        // Extra large backdrop clouds - 4x scale
+        {200,350,0.12f,8.8f},
+        {700,380,0.1f,8.0f},
+        {1050,360,0.11f,8.4f},
+        {50,420,0.16f,5.2f},
+        {900,520,0.18f,5.0f},
+    };
+    for(int i=0;i<20;i++){
+        gClouds[i]={cloudData[i][0],cloudData[i][1],cloudData[i][2],cloudData[i][3],true};
+    }
+
+    // Initialize road vehicles at various positions and speeds
+    float vd[][7]={
+        {220,88,1.5f,0, 0.70f,0.10f,0.12f},   // x, y, speed, type, r, g, b
+        {480,88,2.0f,1, 0.00f,0.00f,0.00f},
+        {700,88,1.8f,0, 0.10f,0.22f,0.72f},
+        {900,88,2.2f,0, 0.08f,0.55f,0.18f},
+        {1060,88,1.6f,0,0.50f,0.10f,0.50f},
+    };
+    for(int i=0;i<5;i++){
+        gVehicles[i]={vd[i][0],vd[i][1],vd[i][2],(int)vd[i][3],vd[i][4],vd[i][5],vd[i][6]};
+    }
+}
+
+// Spawn a new enemy drone with random speed and altitude
+static void spawnDrone()
 {
     for(auto& d:gDrones){
         if(!d.active){
@@ -693,54 +1156,32 @@ static void spawnDrone()//swapdron
         }
     }
 }
-static void drawStreetLights()
+
+// Launch a missile from defense vehicle targeting the specified drone
+static void launchMissile(int droneIdx)
 {
-    col3(0.15f, 0.15f, 0.18f);
-    for(int i = 0; i < 20; i++){
-        float sx = gStreetLights[i][0];
-        float sy = gStreetLights[i][1];
-        
-        // Light pole structure
-        drawRect(sx - 2, sy, 4, 32);
-        
-        // Light fixture head
-        col3(0.30f, 0.30f, 0.35f);
-        drawFilledCircle(sx, sy + 32, 8);
-        
-        // Glow effect (multiple transparent halos around bulb)
-        glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        col4(1.00f, 0.95f, 0.70f, 0.15f);  // Warm yellow glow
-        drawFilledCircle(sx, sy + 32, 16);
-        col4(1.00f, 0.95f, 0.70f, 0.08f);  // Outer dim halo
-        drawFilledCircle(sx, sy + 32, 24);
-        glDisable(GL_BLEND);
-        
-        // Light bulb
-        col3(0.15f, 0.15f, 0.18f);
+    for(int i=0;i<MAX_MISSILES;i++){
+        if(!gMissiles[i].active){
+            gMissiles[i].x        = 185.0f;              // Launch position (gun location)
+            gMissiles[i].y        = 318.0f;
+            gMissiles[i].speed    = 5.5f;
+            gMissiles[i].active   = true;
+            gMissiles[i].targetIdx= droneIdx;
+            gDrones[droneIdx].missileAssigned=i;
+            return;
+        }
     }
 }
 
-
-// ─── Reshape ─────────────────────────────────────────────────
-// Handle window resizing - maintains 2D orthographic projection
-static void reshape(int w,int h)
+// Create explosion at specified location with particles
+static void addExplosion(float x,float y)
 {
-    glViewport(0,0,w,h);              // Update viewport to window size
-    glMatrixMode(GL_PROJECTION); 
-    glLoadIdentity();
-    gluOrtho2D(0,WIN_W,0,WIN_H);      // Set up 2D coordinate system
-    glMatrixMode(GL_MODELVIEW);  
-    glLoadIdentity();
-}
-
-// ─── Input ───────────────────────────────────────────────────
-// Handle keyboard input for player controls
-static void keyboard(unsigned char key,int,int)
-{
-    switch(key){
-        case 27:  exit(0); break;                    // ESC → Quit program
-        case 's': case 'S': spawnDrone(); break;     // S → Manual drone spawn
-        case 'p': case 'P': gPaused=!gPaused; break; // P → Toggle pause
+    for(auto& e:gExplosions){
+        if(!e.active){
+            e={x,y,4.0f,38.0f,0,true};  // Starting radius 4.0, max 38.0
+            spawnParticles(x,y);         // Generate particle burst
+            return;
+        }
     }
 }
 
@@ -829,106 +1270,8 @@ static void update(int)
     glutTimerFunc(16,update,0); // ~60 fps (16ms per frame)
 }
 
-// ─── Initialization ──────────────────────────────────────────
-// Initialize all game systems and data structures
-static void initAll()
-{
-    srand((unsigned)time(nullptr));  // Seed random number generator
-
-    // Generate random star positions in sky
-    for(int i=0;i<200;i++){
-        gStarX[i]=(float)(rand()%WIN_W);
-        gStarY[i]=230+(float)(rand()%(WIN_H-230));  // Only in sky area
-    }
-
-    // Initialize street light positions (two rows along road)
-    float slData[20][2] = {
-        {60,138}, {180,138}, {300,138}, {420,138}, {540,138},
-        {660,138}, {780,138}, {900,138}, {1020,138}, {1140,138},
-        {120,108}, {240,108}, {360,108}, {480,108}, {600,108},
-        {720,108}, {840,108}, {960,108}, {1080,108}, {1200,108}
-    };
-    for(int i=0; i<20; i++){
-        gStreetLights[i][0] = slData[i][0];
-        gStreetLights[i][1] = slData[i][1];
-    }
-
-    // Deactivate all game entities initially
-    for(auto& d:gDrones)    { d.active=false; d.detected=false; d.missileAssigned=-1; }
-    for(auto& m:gMissiles)  { m.active=false; }
-    for(auto& e:gExplosions){ e.active=false; }
-    for(auto& p:gParticles) { p.active=false; }
-    
-    // Initialize cloud layer with parallax speeds (faster = closer to camera) and VERY LARGE sizes (4x bigger)
-    float cloudData[][4] = {
-        // Far layer (small, slow) - 4x scale
-        {50,600,0.08f,1.2f},    // x, y, speed, scale
-        {280,610,0.06f,1.4f},
-        {520,590,0.07f,1.2f},
-        {750,605,0.075f,1.28f},
-        {950,615,0.065f,1.12f},
-        {1100,600,0.07f,1.2f},
-        // Middle layer (medium, moderate speed) - 4x scale
-        {100,520,0.15f,2.8f},
-        {350,550,0.12f,3.2f},
-        {600,510,0.14f,3.0f},
-        {880,535,0.13f,3.12f},
-        {1150,520,0.16f,2.88f},
-        // Close layer (large, fast) - 4x scale
-        {150,450,0.35f,5.6f},
-        {400,480,0.32f,6.0f},
-        {750,430,0.38f,6.4f},
-        {1000,470,0.34f,5.8f},
-        // Extra large backdrop clouds - 4x scale
-        {200,350,0.12f,8.8f},
-        {700,380,0.1f,8.0f},
-        {1050,360,0.11f,8.4f},
-        {50,420,0.16f,5.2f},
-        {900,520,0.18f,5.0f},
-    };
-    for(int i=0;i<20;i++){
-        gClouds[i]={cloudData[i][0],cloudData[i][1],cloudData[i][2],cloudData[i][3],true};
-    }
-
-    // Initialize road vehicles at various positions and speeds
-    float vd[][7]={
-        {220,88,1.5f,0, 0.70f,0.10f,0.12f},   // x, y, speed, type, r, g, b
-        {480,88,2.0f,1, 0.00f,0.00f,0.00f},
-        {700,88,1.8f,0, 0.10f,0.22f,0.72f},
-        {900,88,2.2f,0, 0.08f,0.55f,0.18f},
-        {1060,88,1.6f,0,0.50f,0.10f,0.50f},
-    };
-    for(int i=0;i<5;i++){
-        gVehicles[i]={vd[i][0],vd[i][1],vd[i][2],(int)vd[i][3],vd[i][4],vd[i][5],vd[i][6]};
-    }
-}
-
-static void drawHUD()
-{
-
-    // Controls hint
-    col3(0.55f,0.55f,0.60f);
-    drawText(12,8,"[S] Spawn Drone   [ESC] Quit",GLUT_BITMAP_HELVETICA_12);
-
-    // Paused overlay
-    if(gPaused){
-        glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-        col4(0,0,0,0.5f); drawRect(0,0,WIN_W,WIN_H);
-        glDisable(GL_BLEND);
-        col3(1.0f,1.0f,0.0f);
-        drawText(530,370,"-- PAUSED --");
-        drawText(490,340,"Press P to resume",GLUT_BITMAP_HELVETICA_12);
-    }
-}
-
-static void drawVehicles()
-{
-    for(auto& v:gVehicles){
-        if(v.type==0) drawCar(v.x,v.y,v.r,v.g,v.b);
-        else          drawMotorcycle(v.x,v.y);
-    }
-}
-
+// ─── Display ─────────────────────────────────────────────────
+// Render the complete scene (called once per frame)
 static void display()
 {
     glClear(GL_COLOR_BUFFER_BIT);
@@ -965,6 +1308,29 @@ static void display()
     glutSwapBuffers();  // Double-buffer display
 }
 
+// ─── Reshape ─────────────────────────────────────────────────
+// Handle window resizing - maintains 2D orthographic projection
+static void reshape(int w,int h)
+{
+    glViewport(0,0,w,h);              // Update viewport to window size
+    glMatrixMode(GL_PROJECTION); 
+    glLoadIdentity();
+    gluOrtho2D(0,WIN_W,0,WIN_H);      // Set up 2D coordinate system
+    glMatrixMode(GL_MODELVIEW);  
+    glLoadIdentity();
+}
+
+// ─── Input ───────────────────────────────────────────────────
+// Handle keyboard input for player controls
+static void keyboard(unsigned char key,int,int)
+{
+    switch(key){
+        case 27:  exit(0); break;                    // ESC → Quit program
+        case 's': case 'S': spawnDrone(); break;     // S → Manual drone spawn
+        case 'p': case 'P': gPaused=!gPaused; break; // P → Toggle pause
+    }
+}
+
 // ─── Main ────────────────────────────────────────────────────
 // Program entry point - sets up OpenGL context and starts main loop
 int main(int argc,char** argv)
@@ -999,4 +1365,7 @@ int main(int argc,char** argv)
     glutMainLoop();
     return 0;
 }
+
+
+
 
