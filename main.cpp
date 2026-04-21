@@ -497,7 +497,74 @@ static void update(int)
 // Initialize all game systems and data structures
 static void initAll()
 {
-    // Will be implemented in commit 9
+    srand((unsigned)time(nullptr));  // Seed random number generator
+
+    // Generate random star positions in sky
+    for(int i=0;i<200;i++){
+        gStarX[i]=(float)(rand()%WIN_W);
+        gStarY[i]=230+(float)(rand()%(WIN_H-230));  // Only in sky area
+    }
+
+    // Initialize street light positions (two rows along road)
+    float slData[20][2] = {
+        {60,138}, {180,138}, {300,138}, {420,138}, {540,138},
+        {660,138}, {780,138}, {900,138}, {1020,138}, {1140,138},
+        {120,108}, {240,108}, {360,108}, {480,108}, {600,108},
+        {720,108}, {840,108}, {960,108}, {1080,108}, {1200,108}
+    };
+    for(int i=0; i<20; i++){
+        gStreetLights[i][0] = slData[i][0];
+        gStreetLights[i][1] = slData[i][1];
+    }
+
+    // Deactivate all game entities initially
+    for(auto& d:gDrones)    { d.active=false; d.detected=false; d.missileAssigned=-1; }
+    for(auto& m:gMissiles)  { m.active=false; }
+    for(auto& e:gExplosions){ e.active=false; }
+    for(auto& p:gParticles) { p.active=false; }
+    
+    // Initialize cloud layer with parallax speeds (faster = closer to camera) and VERY LARGE sizes (4x bigger)
+    float cloudData[][4] = {
+        // Far layer (small, slow) - 4x scale
+        {50,600,0.08f,1.2f},    // x, y, speed, scale
+        {280,610,0.06f,1.4f},
+        {520,590,0.07f,1.2f},
+        {750,605,0.075f,1.28f},
+        {950,615,0.065f,1.12f},
+        {1100,600,0.07f,1.2f},
+        // Middle layer (medium, moderate speed) - 4x scale
+        {100,520,0.15f,2.8f},
+        {350,550,0.12f,3.2f},
+        {600,510,0.14f,3.0f},
+        {880,535,0.13f,3.12f},
+        {1150,520,0.16f,2.88f},
+        // Close layer (large, fast) - 4x scale
+        {150,450,0.35f,5.6f},
+        {400,480,0.32f,6.0f},
+        {750,430,0.38f,6.4f},
+        {1000,470,0.34f,5.8f},
+        // Extra large backdrop clouds - 4x scale
+        {200,350,0.12f,8.8f},
+        {700,380,0.1f,8.0f},
+        {1050,360,0.11f,8.4f},
+        {50,420,0.16f,5.2f},
+        {900,520,0.18f,5.0f},
+    };
+    for(int i=0;i<20;i++){
+        gClouds[i]={cloudData[i][0],cloudData[i][1],cloudData[i][2],cloudData[i][3],true};
+    }
+
+    // Initialize road vehicles at various positions and speeds
+    float vd[][7]={
+        {220,88,1.5f,0, 0.70f,0.10f,0.12f},   // x, y, speed, type, r, g, b
+        {480,88,2.0f,1, 0.00f,0.00f,0.00f},
+        {700,88,1.8f,0, 0.10f,0.22f,0.72f},
+        {900,88,2.2f,0, 0.08f,0.55f,0.18f},
+        {1060,88,1.6f,0,0.50f,0.10f,0.50f},
+    };
+    for(int i=0;i<5;i++){
+        gVehicles[i]={vd[i][0],vd[i][1],vd[i][2],(int)vd[i][3],vd[i][4],vd[i][5],vd[i][6]};
+    }
 }
 
 // ─── Main ────────────────────────────────────────────────────
