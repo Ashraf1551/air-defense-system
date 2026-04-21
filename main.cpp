@@ -719,17 +719,7 @@ static void drawStreetLights()
         col3(0.15f, 0.15f, 0.18f);
     }
 }
-// ─── Display ─────────────────────────────────────────────────
-// Render the complete scene (called once per frame)
-static void display()
-{
-    glClear(GL_COLOR_BUFFER_BIT);
-    // Placeholder - will be populated in commit 10
-    drawCitySkyline();
-    drawRadar();
-    // ... other drawing functions
-    glutSwapBuffers();
-}
+
 
 // ─── Reshape ─────────────────────────────────────────────────
 // Handle window resizing - maintains 2D orthographic projection
@@ -913,31 +903,74 @@ static void initAll()
     }
 }
 
+static void display()
+{
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    // Background and environment
+    drawBackground();      // Sky, road, ground, stars, clouds, street lights
+    drawCitySkyline();     // Buildings with lit windows
+    drawVehicles();        // Cars and motorcycles on road
+    drawDefenseVehicle();  // Player's anti-aircraft gun system
+    drawRadar();           // Radar display with sweep and targets
+
+    // Draw drones
+    for(auto& d:gDrones)
+        if(d.active) drawDrone(d.x,d.y,d.detected);
+
+    // Draw active missiles
+    for(auto& m:gMissiles){
+        if(!m.active) continue;
+        int ti=m.targetIdx;
+        if(ti>=0&&gDrones[ti].active)
+            drawMissileProj(m.x,m.y,gDrones[ti].x,gDrones[ti].y);
+    }
+
+    // Draw explosions from hits
+    for(auto& e:gExplosions)
+        if(e.active) drawExplosion(e);
+
+    // Draw particles (sparks, smoke, debris)
+    drawParticles();
+    
+    // Draw HUD overlay (score, instructions, etc.)
+    drawHUD();
+
+    glutSwapBuffers();  // Double-buffer display
+}
+
 // ─── Main ────────────────────────────────────────────────────
 // Program entry point - sets up OpenGL context and starts main loop
-int main(int argc, char** argv)
+int main(int argc,char** argv)
 {
-    glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
-    glutInitWindowSize(WIN_W, WIN_H);
-    glutInitWindowPosition(80, 40);
-    glutCreateWindow("2D Air Defense | Commit: Setup | [S] Spawn [P] Pause [ESC] Quit");
+    // Initialize GLUT and display mode
+    glutInit(&argc,argv);
+    glutInitDisplayMode(GLUT_DOUBLE|GLUT_RGB);     // Double-buffered RGB rendering
+    glutInitWindowSize(WIN_W,WIN_H);               // Set window resolution
+    glutInitWindowPosition(80,40);                 // Set window position on desktop
+    glutCreateWindow("2D Air Defense Simulation System  |  [S] Spawn  [P] Pause  [ESC] Quit");
 
-    glClearColor(0.01f, 0.04f, 0.16f, 1.0f);
+    // Initialize OpenGL settings
+    glClearColor(0.01f,0.04f,0.16f,1.0f);          // Dark blue background
 
-    glMatrixMode(GL_PROJECTION);
+    // Set up 2D orthographic projection
+    glMatrixMode(GL_PROJECTION); 
     glLoadIdentity();
-    gluOrtho2D(0, WIN_W, 0, WIN_H);
-    glMatrixMode(GL_MODELVIEW);
+    gluOrtho2D(0,WIN_W,0,WIN_H);
+    glMatrixMode(GL_MODELVIEW);  
     glLoadIdentity();
 
+    // Initialize game data and systems
     initAll();
 
-    glutDisplayFunc(display);
-    glutReshapeFunc(reshape);
-    glutKeyboardFunc(keyboard);
-    glutTimerFunc(16, update, 0);
+    // Register GLUT callback functions
+    glutDisplayFunc(display);                      // Render callback
+    glutReshapeFunc(reshape);                      // Resize callback
+    glutKeyboardFunc(keyboard);                    // Input callback
+    glutTimerFunc(16,update,0);                    // Start 16ms update timer
 
+    // Enter main event loop (runs indefinitely until exit)
     glutMainLoop();
     return 0;
 }
+
