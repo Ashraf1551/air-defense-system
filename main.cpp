@@ -239,7 +239,6 @@ static void drawCitySkyline() {
 static void drawRadar() {
     float cx = RADAR_X, cy = RADAR_Y, r = RADAR_R;
     float sweepRad = gRadarAngle * PI / 180.0f;
-
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -333,6 +332,51 @@ static void drawMissileProj(float x, float y, float tx, float ty) {
     glEnd();
 
     glPopMatrix();
+}
+
+static void drawExplosion(const Explosion& e) {
+    float t = e.radius / e.maxRadius;
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    col4(1.0f, 0.20f, 0.00f, 1.0f - t * 0.6f);
+    drawFilledCircle(e.x, e.y, e.radius);
+    col4(1.0f, 0.60f, 0.00f, 1.0f - t * 0.7f);
+    drawFilledCircle(e.x, e.y, e.radius * 0.68f);
+    col4(1.0f, 0.95f, 0.40f, 1.0f - t * 0.8f);
+    drawFilledCircle(e.x, e.y, e.radius * 0.40f);
+    col4(1.0f, 1.00f, 1.00f, 1.0f - t * 0.9f);
+    drawFilledCircle(e.x, e.y, e.radius * 0.18f);
+
+    glDisable(GL_BLEND);
+}
+
+// ========== PARTICLES ==========
+static void drawParticles() {
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glPointSize(4.5f);
+    glBegin(GL_POINTS);
+    for (auto& p : gParticles) {
+        if (p.active && p.type == 0) {
+            col4(p.r, p.g, p.b, p.life);
+            glVertex2f(p.x, p.y);
+        }
+    }
+    glEnd();
+    glPointSize(1.0f);
+    glDisable(GL_BLEND);
+}
+
+static void updateParticles() {
+    for (auto& p : gParticles) {
+        if (!p.active) continue;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy -= 0.08f;
+        p.life -= 0.025f;
+        if (p.life <= 0) p.active = false;
+    }
 }
 
 // ─── Display ─────────────────────────────────────────────────
